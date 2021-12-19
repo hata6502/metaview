@@ -1,4 +1,20 @@
 const sendPage = () => {
+  const url = location.href;
+
+  const title =
+    document.querySelector('meta[property="og:title"]')?.content ??
+    document.title;
+
+  const description = `${[
+    title,
+    url,
+    document.querySelector('meta[name="description"]')?.content,
+  ]
+    .filter((line) => line)
+    .join("\n\n")}\n\n`;
+
+  const imageURL = document.querySelector('meta[property="og:image"]')?.content;
+
   const metadata = [
     ...[...document.querySelectorAll("meta[name]")].map((metaElement) =>
       JSON.stringify({
@@ -11,23 +27,11 @@ const sendPage = () => {
     ),
   ].join("");
 
-  const description = [
-    document.querySelector('meta[name="description"]')?.content,
-    metadata,
-  ]
-    .filter((line) => line)
-    .join("\n\n");
-
-  const imageURL = document.querySelector('meta[property="og:image"]')?.content;
-
-  const title =
-    document.querySelector('meta[property="og:title"]')?.content ??
-    document.title;
-
   chrome.runtime.sendMessage({
-    url: location.href,
+    url,
     description,
     imageURL,
+    metadata,
     title,
   });
 };
