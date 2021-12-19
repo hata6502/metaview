@@ -1,5 +1,8 @@
-setInterval(() => {
-  const description = document.querySelector('meta[name="description"]')?.content;
+const sendPage = () => {
+  const description = document.querySelector(
+    'meta[name="description"]'
+  )?.content;
+
   const imageURL = document.querySelector('meta[property="og:image"]')?.content;
 
   const title =
@@ -12,4 +15,7 @@ setInterval(() => {
     imageURL,
     title,
   });
-}, 1000);
+};
+
+sendPage();
+setInterval(sendPage, 1000);
