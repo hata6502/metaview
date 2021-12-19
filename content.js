@@ -1,7 +1,22 @@
 const sendPage = () => {
-  const description = document.querySelector(
-    'meta[name="description"]'
-  )?.content;
+  const metadata = [
+    ...[...document.querySelectorAll("meta[name]")].map((metaElement) =>
+      JSON.stringify({
+        name: metaElement.name,
+        content: metaElement.content,
+      })
+    ),
+    ...[...document.querySelectorAll('script[type="application/ld+json"]')].map(
+      (scriptElement) => JSON.stringify(JSON.parse(scriptElement.innerText))
+    ),
+  ].join("");
+
+  const description = [
+    document.querySelector('meta[name="description"]')?.content,
+    metadata,
+  ]
+    .filter((line) => line)
+    .join("\n\n");
 
   const imageURL = document.querySelector('meta[property="og:image"]')?.content;
 

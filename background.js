@@ -63,9 +63,9 @@ chrome.bookmarks.onCreated.addListener(async (_id, bookmark) => {
 
     formData.append(
       "desc",
-      [page.title, bookmark.url, page.description]
+      `${[page.title, bookmark.url, page.description]
         .filter((line) => line)
-        .join("\n")
+        .join("\n")}\n\n`
     );
 
     const uploadResponse = await fetch(
