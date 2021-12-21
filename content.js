@@ -1,3 +1,9 @@
+const getSingleImageURL = () => {
+  const imageElements = document.querySelectorAll("img");
+
+  return imageElements.length === 1 && imageElements[0].src;
+};
+
 const sendPage = () => {
   const url = location.href;
 
@@ -13,7 +19,9 @@ const sendPage = () => {
     .join("\n\n")}\n\n`;
 
   const imageURL =
-    document.querySelector('meta[property="og:image"]')?.content ?? "";
+    document.querySelector('meta[property="og:image"]')?.content ??
+    getSingleImageURL() ??
+    "";
 
   const metadata = [
     ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) => {

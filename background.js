@@ -56,7 +56,7 @@ chrome.bookmarks.onCreated.addListener(async (_id, bookmark) => {
   fileReader.onload = async () => {
     const formData = new FormData();
 
-    formData.append("app", "Zukan");
+    formData.append("app", "zukan");
     formData.append("client_id", "gAvDn6SqYstuQ5s_SfgKmzBsUlNryxJX4bnUHFyyYhU");
     formData.append("desc", page.description);
     formData.append("image_url", fileReader.result);
