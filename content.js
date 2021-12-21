@@ -5,27 +5,35 @@ const sendPage = () => {
     document.querySelector('meta[property="og:title"]')?.content ??
     document.title;
 
-  const description = `${[
-    title,
-    url,
-    document.querySelector('meta[name="description"]')?.content,
-  ]
+  const metaDescription =
+    document.querySelector('meta[name="description"]')?.content ?? "";
+
+  const description = `${[title, url, metaDescription]
     .filter((line) => line)
     .join("\n\n")}\n\n`;
 
-  const imageURL = document.querySelector('meta[property="og:image"]')?.content;
+  const imageURL =
+    document.querySelector('meta[property="og:image"]')?.content ?? "";
 
   const metadata = [
-    ...[...document.querySelectorAll("meta[name]")].map((metaElement) =>
-      JSON.stringify({
-        name: metaElement.name,
-        content: metaElement.content,
-      })
-    ),
+    ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) => {
+      const content = [url, imageURL, metaDescription, title].reduce(
+        (previousValue, currentValue) =>
+          previousValue.split(currentValue).join(""),
+        metaElement.content
+      );
+
+      return content ? [`${metaElement.name}:${content}`] : [];
+    }),
     ...[...document.querySelectorAll('script[type="application/ld+json"]')].map(
-      (scriptElement) => JSON.stringify(JSON.parse(scriptElement.innerText))
+      (scriptElement) =>
+        [url, imageURL, metaDescription, title].reduce(
+          (previousValue, currentValue) =>
+            previousValue.split(currentValue).join(""),
+          JSON.stringify(JSON.parse(scriptElement.innerText))
+        )
     ),
-  ].join("");
+  ].join(" ");
 
   chrome.runtime.sendMessage({
     url,
