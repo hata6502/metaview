@@ -1,7 +1,24 @@
 const getSingleImageURL = () => {
   const imageElements = document.querySelectorAll("img");
 
-  return imageElements.length === 1 && imageElements[0].src;
+  if (imageElements.length !== 1) {
+    return;
+  }
+
+  const imageElement = imageElements[0];
+
+  if (!imageElement.complete || imageElement.naturalWidth < 1) {
+    return;
+  }
+
+  const canvasElement = document.createElement("canvas");
+  const canvasContext = canvasElement.getContext("2d");
+
+  canvasElement.width = imageElement.naturalWidth;
+  canvasElement.height = imageElement.naturalHeight;
+  canvasContext.drawImage(imageElement, 0, 0);
+
+  return canvasElement.toDataURL();
 };
 
 const sendPage = () => {
@@ -52,5 +69,9 @@ const sendPage = () => {
   });
 };
 
-sendPage();
-setInterval(sendPage, 1000);
+document.addEventListener("DOMContentLoaded", () => {
+  sendPage();
+  setInterval(sendPage, 1000);
+});
+
+addEventListener("load", sendPage);
