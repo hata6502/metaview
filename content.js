@@ -25,24 +25,41 @@ const sendPage = () => {
   const url = location.href;
 
   const title =
-    document.querySelector('meta[property="og:title"]')?.content ??
+    document.querySelector('meta[property="og:title" i]')?.content ??
     document.title;
 
   const metaDescription =
-    document.querySelector('meta[name="description"]')?.content ?? "";
+    document.querySelector('meta[name="description" i]')?.content ?? "";
 
-  const description = `${[title, url, metaDescription]
+  const metaKeywords =
+    document.querySelector('meta[name="keywords" i]')?.content ?? "";
+
+  const keywords = metaKeywords.split(",").flatMap((keyword) => {
+    const trimmedKeyword = keyword.trim();
+
+    return trimmedKeyword === "" ? [] : [trimmedKeyword];
+  });
+
+  const hashTagLine = keywords.map((keyword) => `#${keyword}`).join(" ");
+
+  const description = `${[title, url, metaDescription, hashTagLine]
     .filter((line) => line)
     .join("\n\n")}\n\n`;
 
   const imageURL =
-    document.querySelector('meta[property="og:image"]')?.content ??
+    document.querySelector('meta[property="og:image" i]')?.content ??
     getSingleImageURL() ??
     "";
 
   const metadata = [
     ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) => {
-      const content = [url, imageURL, metaDescription, title].reduce(
+      const content = [
+        ...keywords,
+        url,
+        imageURL,
+        metaDescription,
+        title,
+      ].reduce(
         (previousValue, currentValue) =>
           previousValue.split(currentValue).join(""),
         metaElement.content
@@ -50,13 +67,14 @@ const sendPage = () => {
 
       return content ? [`${metaElement.name}:${content}`] : [];
     }),
-    ...[...document.querySelectorAll('script[type="application/ld+json"]')].map(
-      (scriptElement) =>
-        [url, imageURL, metaDescription, title].reduce(
-          (previousValue, currentValue) =>
-            previousValue.split(currentValue).join(""),
-          JSON.stringify(JSON.parse(scriptElement.innerText))
-        )
+    ...[
+      ...document.querySelectorAll('script[type="application/ld+json" i]'),
+    ].map((scriptElement) =>
+      [...keywords, url, imageURL, metaDescription, title].reduce(
+        (previousValue, currentValue) =>
+          previousValue.split(currentValue).join(""),
+        JSON.stringify(JSON.parse(scriptElement.innerText))
+      )
     ),
   ].join(" ");
 
@@ -69,9 +87,6 @@ const sendPage = () => {
   });
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  sendPage();
-  setInterval(sendPage, 1000);
-});
-
+document.addEventListener("DOMContentLoaded", sendPage);
 addEventListener("load", sendPage);
+setInterval(sendPage, 1000);
