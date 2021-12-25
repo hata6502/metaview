@@ -54,10 +54,10 @@ const sendPage = () => {
   const metadata = [
     ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) => {
       const content = [
-        ...keywords,
         url,
         imageURL,
         metaDescription,
+        metaKeywords,
         title,
       ].reduce(
         (previousValue, currentValue) =>
@@ -70,7 +70,7 @@ const sendPage = () => {
     ...[
       ...document.querySelectorAll('script[type="application/ld+json" i]'),
     ].map((scriptElement) =>
-      [...keywords, url, imageURL, metaDescription, title].reduce(
+      [url, imageURL, metaDescription, metaKeywords, title].reduce(
         (previousValue, currentValue) =>
           previousValue.split(currentValue).join(""),
         JSON.stringify(JSON.parse(scriptElement.innerText))
