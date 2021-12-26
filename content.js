@@ -49,6 +49,7 @@ const sendPage = () => {
   const imageURL =
     document.querySelector('meta[property="og:image" i]')?.content ??
     getSingleImageURL() ??
+    document.querySelector('link[rel="icon" i]')?.href ??
     "";
 
   const metadata = [
