@@ -29,7 +29,9 @@ const sendPage = () => {
     document.title;
 
   const metaDescription =
-    document.querySelector('meta[name="description" i]')?.content ?? "";
+    document.querySelector('meta[property="og:description" i]')?.content ??
+    document.querySelector('meta[name="description" i]')?.content ??
+    "";
 
   const metaKeywords =
     document.querySelector('meta[name="keywords" i]')?.content ?? "";
