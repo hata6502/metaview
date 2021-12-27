@@ -40,7 +40,9 @@ const sendPage = () => {
     return trimmedKeyword === "" ? [] : [trimmedKeyword];
   });
 
-  const hashTagLine = keywords.map((keyword) => `#${keyword}`).join(" ");
+  const hashTagLine = keywords
+    .map((keyword) => `#${keyword.replaceAll(" ", "_")}`)
+    .join(" ");
 
   const description = `${[title, url, metaDescription, hashTagLine]
     .filter((line) => line)
@@ -62,7 +64,7 @@ const sendPage = () => {
         title,
       ].reduce(
         (previousValue, currentValue) =>
-          previousValue.split(currentValue).join(""),
+          previousValue.replaceAll(currentValue, ""),
         metaElement.content
       );
 
@@ -73,7 +75,7 @@ const sendPage = () => {
     ].map((scriptElement) =>
       [url, imageURL, metaDescription, metaKeywords, title].reduce(
         (previousValue, currentValue) =>
-          previousValue.split(currentValue).join(""),
+          previousValue.replaceAll(currentValue, ""),
         JSON.stringify(JSON.parse(scriptElement.innerText))
       )
     ),
