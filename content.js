@@ -78,7 +78,7 @@ const sendPage = () => {
       [url, imageURL, metaDescription, metaKeywords, title].reduce(
         (previousValue, currentValue) =>
           previousValue.replaceAll(currentValue, ""),
-        JSON.stringify(JSON.parse(scriptElement.innerText))
+        scriptElement.innerText
       )
     ),
   ].join(" ");
