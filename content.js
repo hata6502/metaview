@@ -94,7 +94,7 @@ const getBreadcrumbs = ({ structuredDataList }) =>
         [...itemListElement]
           .sort((a, b) => a.position - b.position)
           .flatMap((listItem) => {
-            const { name } = listItem.item;
+            const name = listItem?.item?.name;
 
             return name ? [stringToHashTag(name)] : [];
            })
