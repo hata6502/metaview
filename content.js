@@ -34,7 +34,7 @@ const sendPage = () => {
 
   const imageURL =
     document.querySelector('meta[property="og:image" i]')?.content ||
-    (typeof articleStructuredDataImage === string &&
+    (typeof articleStructuredDataImage === "string" &&
       articleStructuredDataImage) ||
     getSingleImageURL() ||
     document.querySelector('link[rel="icon" i]')?.href;
@@ -94,7 +94,7 @@ const getBreadcrumbs = ({ structuredDataList }) =>
         [...itemListElement]
           .sort((a, b) => a.position - b.position)
           .flatMap((listItem) => {
-            const name = listItem?.item?.name;
+            const name = listItem?.name;
 
             return name ? [stringToHashTag(name)] : [];
            })
