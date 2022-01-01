@@ -1,4 +1,5 @@
 import { BackgroundMessage } from "./background.mjs";
+import { Thing, WithContext } from "schema-dts";
 
 const sendPage = () => {
   const structuredDataList = [
@@ -14,17 +15,9 @@ const sendPage = () => {
         ? jsonLD
         : [jsonLD];
 
-      return jsonLDDocuments.flatMap((jsonLDDocument) => {
-        const structuredDataContexts: unknown[] = [
-          "http://schema.org",
-          "https://schema.org",
-        ];
-
-        return isObject(jsonLDDocument) &&
-          structuredDataContexts.includes(jsonLDDocument["@context"])
-          ? [jsonLDDocument]
-          : [];
-      });
+      return jsonLDDocuments.flatMap((jsonLDDocument) =>
+        isStructuredData(jsonLDDocument) ? [jsonLDDocument] : []
+      );
     } catch (exception) {
       console.error(exception);
 
@@ -87,27 +80,48 @@ setInterval(sendPage, 1000);
 const getArticleStructuredData = ({
   structuredDataList,
 }: {
-  structuredDataList: Record<string, unknown>[];
-}) =>
-  structuredDataList.find((structuredData) => {
-    const articleTypes: unknown[] = ["Article", "BlogPosting", "NewsArticle"];
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const articleStructuredDataList = structuredDataList.flatMap(
+    (structuredData) => {
+      if (!("@type" in structuredData)) {
+        return [];
+      }
 
-    return articleTypes.includes(structuredData["@type"]);
-  });
+      const type = structuredData["@type"];
+
+      return type === "Article" ||
+        type === "BlogPosting" ||
+        type === "NewsArticle"
+        ? [structuredData]
+        : [];
+    }
+  );
+
+  if (articleStructuredDataList.length < 1) {
+    return;
+  }
+
+  return articleStructuredDataList[0];
+};
 
 const getBreadcrumbs = ({
   structuredDataList,
 }: {
-  structuredDataList: Record<string, unknown>[];
+  structuredDataList: WithContext<Thing>[];
 }) =>
   structuredDataList
     .flatMap((structuredData) => {
+      if (
+        !("@type" in structuredData) ||
+        structuredData["@type"] !== "BreadcrumbList"
+      ) {
+        return [];
+      }
+
       const { itemListElement } = structuredData;
 
-      if (
-        structuredData["@type"] !== "BreadcrumbList" ||
-        !Array.isArray(itemListElement)
-      ) {
+      if (!Array.isArray(itemListElement)) {
         return [];
       }
 
@@ -131,7 +145,7 @@ const getBreadcrumbs = ({
 const getCreditLine = ({
   structuredDataList,
 }: {
-  structuredDataList: Record<string, unknown>[];
+  structuredDataList: WithContext<Thing>[];
 }) => {
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
@@ -143,7 +157,9 @@ const getCreditLine = ({
   const credits = [
     ...new Set(
       [
+        // @ts-expect-error
         isObject(author) && author.name,
+        // @ts-expect-error
         isObject(publisher) && publisher.name,
         ,
         ...[
@@ -165,7 +181,7 @@ const getCreditLine = ({
 const getDateLine = ({
   structuredDataList,
 }: {
-  structuredDataList: Record<string, unknown>[];
+  structuredDataList: WithContext<Thing>[];
 }) => {
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
@@ -182,7 +198,7 @@ const getDateLine = ({
 const getDescription = ({
   structuredDataList,
 }: {
-  structuredDataList: Record<string, unknown>[];
+  structuredDataList: WithContext<Thing>[];
 }) => {
   const descriptionElement = document.querySelector(
     'meta[name="description" i]'
@@ -220,7 +236,7 @@ const getHashTagLine = () => {
 const getStructuredDataImageURL = ({
   structuredDataList,
 }: {
-  structuredDataList: Record<string, unknown>[];
+  structuredDataList: WithContext<Thing>[];
 }) => {
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
@@ -235,6 +251,7 @@ const getStructuredDataImageURL = ({
     }
 
     const publisherLogoImageURL =
+      // @ts-expect-error
       isObject(publisher) && isObject(publisher.logo) && publisher.logo.url;
 
     if (typeof publisherLogoImageURL === "string") {
@@ -242,12 +259,14 @@ const getStructuredDataImageURL = ({
     }
   }
 
-  const logoStructuredData = structuredDataList.find(
-    (structuredData) => structuredData["@type"] === "Organization"
+  const logoStructuredDataList = structuredDataList.flatMap((structuredData) =>
+    "@type" in structuredData && structuredData["@type"] === "Organization"
+      ? [structuredData]
+      : []
   );
 
-  if (logoStructuredData) {
-    const { logo } = logoStructuredData;
+  if (logoStructuredDataList.length >= 1) {
+    const { logo } = logoStructuredDataList[0];
 
     if (typeof logo === "string") {
       return logo;
@@ -266,5 +285,16 @@ const getTitle = () => {
 
 const isObject = (unknown: unknown): unknown is Record<string, unknown> =>
   typeof unknown === "object" && unknown !== null;
+
+const isStructuredData = (unknown: unknown): unknown is WithContext<Thing> => {
+  const structuredDataContexts: unknown[] = [
+    "http://schema.org",
+    "https://schema.org",
+  ];
+
+  return (
+    isObject(unknown) && structuredDataContexts.includes(unknown["@context"])
+  );
+};
 
 const stringToHashTag = (string: string) => `#${string.replaceAll(" ", "_")}`;
