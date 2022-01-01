@@ -1,5 +1,5 @@
 import { BackgroundMessage } from "./background.mjs";
-import { Thing, WithContext } from "schema-dts";
+import { Product, Thing, WithContext } from "schema-dts";
 
 const sendPage = () => {
   const structuredDataList = [
@@ -49,6 +49,7 @@ const sendPage = () => {
         .filter((line) => line)
         .join("\n"),
       getBreadcrumbs({ structuredDataList }),
+      getDetails({ structuredDataList }),
       getDescription({ structuredDataList }),
       getHashTagLine(),
     ]
@@ -175,7 +176,7 @@ const getCreditLine = ({
     ),
   ];
 
-  return credits.length >= 1 && `by ${credits.map(stringToHashTag).join(" ")}`;
+  return credits.length >= 1 && `By ${credits.map(stringToHashTag).join(" ")}`;
 };
 
 const getDateLine = ({
@@ -190,9 +191,7 @@ const getDateLine = ({
   const dateString =
     articleStructuredData?.dateModified ?? articleStructuredData?.datePublished;
 
-  return (
-    typeof dateString === "string" && new Date(dateString).toLocaleString()
-  );
+  return typeof dateString === "string" && dateString;
 };
 
 const getDescription = ({
@@ -208,13 +207,96 @@ const getDescription = ({
     'meta[property="og:description" i]'
   );
 
+  const productStructuredDataDescription = getProductStructuredData({
+    structuredDataList,
+  })?.description;
+
+  const articleStructuredDataHeadline = getArticleStructuredData({
+    structuredDataList,
+  })?.headline;
+
   return (
+    (typeof productStructuredDataDescription === "string" &&
+      productStructuredDataDescription) ||
+    (typeof articleStructuredDataHeadline === "string" &&
+      articleStructuredDataHeadline) ||
     (ogDescriptionElement instanceof HTMLMetaElement &&
       ogDescriptionElement.content) ||
     (descriptionElement instanceof HTMLMetaElement &&
-      descriptionElement.content) ||
-    getArticleStructuredData({ structuredDataList })?.headline
+      descriptionElement.content)
   );
+};
+
+const getDetails = ({
+  structuredDataList,
+}: {
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const detailGroups: unknown[][] = [];
+
+  const productStructuredData = getProductStructuredData({
+    structuredDataList,
+  });
+
+  if (productStructuredData) {
+    const { brand, name, offers } = productStructuredData;
+    const offer: Product["offers"] = Array.isArray(offers) ? offers[0] : offers;
+
+    detailGroups.push([
+      typeof name === "string" && name,
+      // @ts-expect-error
+      isObject(brand) && `${stringToHashTag(brand.name)} brand`,
+      offer &&
+        "price" in offer &&
+        (typeof offer.price === "number" || typeof offer.price === "string") &&
+        `${offer.price} ${
+          typeof offer.priceCurrency === "string" ? offer.priceCurrency : ""
+        }`,
+      offer &&
+        "lowPrice" in offer &&
+        (typeof offer.lowPrice === "number" ||
+          typeof offer.lowPrice === "string") &&
+        typeof offer.priceCurrency === "string" &&
+        `${offer.lowPrice} ${
+          typeof offer.highPrice === "number" ||
+          typeof offer.highPrice === "string"
+            ? `~ ${offer.highPrice} `
+            : ""
+        }${offer.priceCurrency}`,
+      offer &&
+        "availability" in offer &&
+        typeof offer.availability === "string" &&
+        offer.availability
+          .replace("http://schema.org/", "")
+          .replace("https://schema.org/", ""),
+      offer &&
+        "itemCondition" in offer &&
+        typeof offer.itemCondition === "string" &&
+        offer.itemCondition
+          .replace("http://schema.org/", "")
+          .replace("https://schema.org/", ""),
+      offer &&
+        "offerCount" in offer &&
+        typeof offer.offerCount === "number" &&
+        `${offer.offerCount} left`,
+      offer &&
+        "priceValidUntil" in offer &&
+        typeof offer.priceValidUntil === "string" &&
+        `Until ${offer.priceValidUntil}`,
+      ,
+    ]);
+  }
+
+  return detailGroups
+    .map((detailGroup) =>
+      detailGroup
+        .flatMap((detail) =>
+          typeof detail === "string" ? [`- ${detail}`] : []
+        )
+        .join("\n")
+    )
+    .filter((detailGroup) => detailGroup)
+    .join("\n\n");
 };
 
 const getHashTagLine = () => {
@@ -233,11 +315,48 @@ const getHashTagLine = () => {
   return keywords.map(stringToHashTag).join(" ");
 };
 
+const getProductStructuredData = ({
+  structuredDataList,
+}: {
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const productStructuredDataList = structuredDataList.flatMap(
+    (structuredData) => {
+      if (!("@type" in structuredData)) {
+        return [];
+      }
+
+      const type = structuredData["@type"];
+
+      return type === "Product" ? [structuredData] : [];
+    }
+  );
+
+  if (productStructuredDataList.length < 1) {
+    return;
+  }
+
+  return productStructuredDataList[0];
+};
+
 const getStructuredDataImageURL = ({
   structuredDataList,
 }: {
   structuredDataList: WithContext<Thing>[];
 }) => {
+  const productStructuredData = getProductStructuredData({
+    structuredDataList,
+  });
+
+  if (productStructuredData) {
+    const { image } = productStructuredData;
+    const imageURL: unknown = Array.isArray(image) && image[0];
+
+    if (typeof imageURL === "string") {
+      return imageURL;
+    }
+  }
+
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
   });
@@ -289,7 +408,9 @@ const isObject = (unknown: unknown): unknown is Record<string, unknown> =>
 const isStructuredData = (unknown: unknown): unknown is WithContext<Thing> => {
   const structuredDataContexts: unknown[] = [
     "http://schema.org",
+    "http://schema.org/",
     "https://schema.org",
+    "https://schema.org/",
   ];
 
   return (
