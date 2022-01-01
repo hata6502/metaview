@@ -1,5 +1,7 @@
-import { BackgroundMessage } from "./background.mjs";
 import { Product, Thing, WithContext } from "schema-dts";
+import { BackgroundMessage } from "./background.mjs";
+import {isObject} from "./isObject.mjs";
+import { getArticleStructuredData, getProductStructuredData, isStructuredData } from "./structuredData.mjs";
 
 const sendPage = () => {
   const structuredDataList = [
@@ -77,34 +79,6 @@ const sendPage = () => {
 document.addEventListener("DOMContentLoaded", sendPage);
 addEventListener("load", sendPage);
 setInterval(sendPage, 1000);
-
-const getArticleStructuredData = ({
-  structuredDataList,
-}: {
-  structuredDataList: WithContext<Thing>[];
-}) => {
-  const articleStructuredDataList = structuredDataList.flatMap(
-    (structuredData) => {
-      if (!("@type" in structuredData)) {
-        return [];
-      }
-
-      const type = structuredData["@type"];
-
-      return type === "Article" ||
-        type === "BlogPosting" ||
-        type === "NewsArticle"
-        ? [structuredData]
-        : [];
-    }
-  );
-
-  if (articleStructuredDataList.length < 1) {
-    return;
-  }
-
-  return articleStructuredDataList[0];
-};
 
 const getBreadcrumbs = ({
   structuredDataList,
@@ -315,30 +289,6 @@ const getHashTagLine = () => {
   return keywords.map(stringToHashTag).join(" ");
 };
 
-const getProductStructuredData = ({
-  structuredDataList,
-}: {
-  structuredDataList: WithContext<Thing>[];
-}) => {
-  const productStructuredDataList = structuredDataList.flatMap(
-    (structuredData) => {
-      if (!("@type" in structuredData)) {
-        return [];
-      }
-
-      const type = structuredData["@type"];
-
-      return type === "Product" ? [structuredData] : [];
-    }
-  );
-
-  if (productStructuredDataList.length < 1) {
-    return;
-  }
-
-  return productStructuredDataList[0];
-};
-
 const getStructuredDataImageURL = ({
   structuredDataList,
 }: {
@@ -399,22 +349,6 @@ const getTitle = () => {
   return (
     (ogTitleElement instanceof HTMLMetaElement && ogTitleElement.content) ||
     document.title
-  );
-};
-
-const isObject = (unknown: unknown): unknown is Record<string, unknown> =>
-  typeof unknown === "object" && unknown !== null;
-
-const isStructuredData = (unknown: unknown): unknown is WithContext<Thing> => {
-  const structuredDataContexts: unknown[] = [
-    "http://schema.org",
-    "http://schema.org/",
-    "https://schema.org",
-    "https://schema.org/",
-  ];
-
-  return (
-    isObject(unknown) && structuredDataContexts.includes(unknown["@context"])
   );
 };
 
