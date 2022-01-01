@@ -4,12 +4,12 @@
   "manifest_version": 3,
   "description": "Bookmark web pages to Gyazo. ",
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["dist/content.js"]
     }
   ],
   "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },

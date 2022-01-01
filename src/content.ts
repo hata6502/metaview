@@ -1,3 +1,5 @@
+import { BackgroundMessage } from "./background";
+
 const sendPage = () => {
   const structuredDataList = [
     ...document.querySelectorAll('script[type="application/ld+json" i]'),
@@ -7,17 +9,22 @@ const sendPage = () => {
     }
 
     try {
-      const jsonLD = JSON.parse(jsonLDElement.innerText);
-      const jsonLDDocuments = Array.isArray(jsonLD) ? jsonLD : [jsonLD];
+      const jsonLD: unknown = JSON.parse(jsonLDElement.innerText);
+      const jsonLDDocuments: unknown[] = Array.isArray(jsonLD)
+        ? jsonLD
+        : [jsonLD];
 
-      return jsonLDDocuments.filter(
-        (jsonLDDocument) =>
-          typeof jsonLDDocument === "object" &&
-          jsonLDDocument !== null &&
-          ["http://schema.org", "https://schema.org"].includes(
-            jsonLDDocument["@context"]
-          )
-      );
+      return jsonLDDocuments.flatMap((jsonLDDocument) => {
+        const structuredDataContexts: unknown[] = [
+          "http://schema.org",
+          "https://schema.org",
+        ];
+
+        return isObject(jsonLDDocument) &&
+          structuredDataContexts.includes(jsonLDDocument["@context"])
+          ? [jsonLDDocument]
+          : [];
+      });
     } catch (exception) {
       console.error(exception);
 
@@ -28,18 +35,26 @@ const sendPage = () => {
   const url = location.href;
   const title = getTitle();
 
-  const articleStructuredDataImage = getArticleStructuredData({
+  const articleStructuredDataImages = getArticleStructuredData({
     structuredDataList,
-  })?.image[0];
+  })?.image;
+
+  const articleStructuredDataImage: unknown =
+    Array.isArray(articleStructuredDataImages) &&
+    articleStructuredDataImages[0];
+
+  const ogImageElement = document.querySelector('meta[property="og:image" i]');
+  const iconElement = document.querySelector('link[rel="icon" i]');
 
   const imageURL =
-    document.querySelector('meta[property="og:image" i]')?.content ||
+    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
     (typeof articleStructuredDataImage === "string" &&
       articleStructuredDataImage) ||
     getSingleImageURL() ||
-    document.querySelector('link[rel="icon" i]')?.href;
+    (iconElement instanceof HTMLLinkElement && iconElement.href) ||
+    undefined;
 
-  chrome.runtime.sendMessage({
+  const backgroundMessage: BackgroundMessage = {
     url,
     description: `${[
       title,
@@ -58,27 +73,43 @@ const sendPage = () => {
       .join("\n\n")}\n\n`,
     imageURL,
     metadata: [
-      ...[...document.querySelectorAll("meta[name]")].map(
-        (metaElement) => `${metaElement.name}:${metaElement.content}`
+      ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) =>
+        metaElement instanceof HTMLMetaElement
+          ? [`${metaElement.name}:${metaElement.content}`]
+          : []
       ),
       ...[
         ...document.querySelectorAll('script[type="application/ld+json" i]'),
-      ].map((scriptElement) => scriptElement.innerText),
+      ].flatMap((scriptElement) =>
+        scriptElement instanceof HTMLElement ? [scriptElement.innerText] : []
+      ),
     ].join(" "),
     title,
-  });
+  };
+
+  chrome.runtime.sendMessage(backgroundMessage);
 };
 
 document.addEventListener("DOMContentLoaded", sendPage);
 addEventListener("load", sendPage);
 setInterval(sendPage, 1000);
 
-const getArticleStructuredData = ({ structuredDataList }) =>
-  structuredDataList.find((structuredData) =>
-    ["Article", "BlogPosting", "NewsArticle"].includes(structuredData["@type"])
-  );
+const getArticleStructuredData = ({
+  structuredDataList,
+}: {
+  structuredDataList: Record<string, unknown>[];
+}) =>
+  structuredDataList.find((structuredData) => {
+    const articleTypes: unknown[] = ["Article", "BlogPosting", "NewsArticle"];
 
-const getBreadcrumbs = ({ structuredDataList }) =>
+    return articleTypes.includes(structuredData["@type"]);
+  });
+
+const getBreadcrumbs = ({
+  structuredDataList,
+}: {
+  structuredDataList: Record<string, unknown>[];
+}) =>
   structuredDataList
     .flatMap((structuredData) => {
       const { itemListElement } = structuredData;
@@ -101,22 +132,29 @@ const getBreadcrumbs = ({ structuredDataList }) =>
             const name = listItem.item?.name ?? listItem.name;
 
             return typeof name === "string" ? [stringToHashTag(name)] : [];
-           })
+          })
           .join(" > "),
       ];
     })
     .join("\n");
 
-const getCreditLine = ({ structuredDataList }) => {
+const getCreditLine = ({
+  structuredDataList,
+}: {
+  structuredDataList: Record<string, unknown>[];
+}) => {
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
   });
 
+  const author = articleStructuredData?.author;
+  const publisher = articleStructuredData?.publisher;
+
   const credits = [
     ...new Set(
       [
-        articleStructuredData?.author?.name,
-        articleStructuredData?.publisher?.name,
+        isObject(author) && author.name,
+        isObject(publisher) && publisher.name,
         ,
         ...[
           ...document.querySelectorAll(
@@ -127,14 +165,18 @@ const getCreditLine = ({ structuredDataList }) => {
             ? [creditElement.content]
             : []
         ),
-      ].filter((credit) => credit)
+      ].flatMap((credit) => (typeof credit === "string" ? [credit] : []))
     ),
   ];
 
   return credits.length >= 1 && `by ${credits.map(stringToHashTag).join(" ")}`;
 };
 
-const getDateLine = ({ structuredDataList }) => {
+const getDateLine = ({
+  structuredDataList,
+}: {
+  structuredDataList: Record<string, unknown>[];
+}) => {
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
   });
@@ -142,10 +184,16 @@ const getDateLine = ({ structuredDataList }) => {
   const dateString =
     articleStructuredData?.dateModified ?? articleStructuredData?.datePublished;
 
-  return dateString && new Date(dateString).toLocaleString();
+  return (
+    typeof dateString === "string" && new Date(dateString).toLocaleString()
+  );
 };
 
-const getDescription = ({ structuredDataList }) => {
+const getDescription = ({
+  structuredDataList,
+}: {
+  structuredDataList: Record<string, unknown>[];
+}) => {
   const descriptionElement = document.querySelector(
     'meta[name="description" i]'
   );
@@ -195,6 +243,10 @@ const getSingleImageURL = () => {
   const canvasElement = document.createElement("canvas");
   const canvasContext = canvasElement.getContext("2d");
 
+  if (!canvasContext) {
+    throw new Error("Canvas is not supported.");
+  }
+
   canvasElement.width = imageElement.naturalWidth;
   canvasElement.height = imageElement.naturalHeight;
   canvasContext.drawImage(imageElement, 0, 0);
@@ -211,4 +263,7 @@ const getTitle = () => {
   );
 };
 
-const stringToHashTag = (string) => `#${string.replaceAll(" ", "_")}`;
+const isObject = (unknown: unknown): unknown is Record<string, unknown> =>
+  typeof unknown === "object" && unknown !== null;
+
+const stringToHashTag = (string: string) => `#${string.replaceAll(" ", "_")}`;
