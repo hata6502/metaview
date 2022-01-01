@@ -1,7 +1,11 @@
 import { Product, Thing, WithContext } from "schema-dts";
-import { BackgroundMessage } from "./background.mjs";
-import {isObject} from "./isObject.mjs";
-import { getArticleStructuredData, getProductStructuredData, isStructuredData } from "./structuredData.mjs";
+import { BackgroundMessage } from "./background";
+import { isObject } from "./isObject";
+import {
+  getArticleStructuredData,
+  getProductStructuredData,
+  isStructuredData,
+} from "./structuredData";
 
 const sendPage = () => {
   const structuredDataList = [

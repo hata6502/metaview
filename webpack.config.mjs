@@ -1,13 +1,13 @@
 const config = {
   mode: "production",
   entry: {
-    background: "./src/background.mts",
-    content: "./src/content.mts",
+    background: "./src/background.ts",
+    content: "./src/content.ts",
   },
   module: {
     rules: [
       {
-        test: /\.[cm]?[jt]sx?$/,
+        test: /\.[jt]sx?$/,
         loader: "ts-loader",
         options: {
           transpileOnly: true,

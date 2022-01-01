@@ -1,5 +1,5 @@
 import { Thing, WithContext } from "schema-dts";
-import { isObject } from "./isObject.mjs";
+import { isObject } from "./isObject";
 
 export const getArticleStructuredData = ({
   structuredDataList,
