@@ -35,22 +35,12 @@ const sendPage = () => {
   const url = location.href;
   const title = getTitle();
 
-  const articleStructuredDataImages = getArticleStructuredData({
-    structuredDataList,
-  })?.image;
-
-  const articleStructuredDataImage: unknown =
-    Array.isArray(articleStructuredDataImages) &&
-    articleStructuredDataImages[0];
-
   const ogImageElement = document.querySelector('meta[property="og:image" i]');
   const iconElement = document.querySelector('link[rel="icon" i]');
 
   const imageURL =
     (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
-    (typeof articleStructuredDataImage === "string" &&
-      articleStructuredDataImage) ||
-    getSingleImageURL() ||
+    getStructuredDataImageURL({ structuredDataList }) ||
     (iconElement instanceof HTMLLinkElement && iconElement.href) ||
     undefined;
 
@@ -227,31 +217,42 @@ const getHashTagLine = () => {
   return keywords.map(stringToHashTag).join(" ");
 };
 
-const getSingleImageURL = () => {
-  const imageElements = document.querySelectorAll("img");
+const getStructuredDataImageURL = ({
+  structuredDataList,
+}: {
+  structuredDataList: Record<string, unknown>[];
+}) => {
+  const articleStructuredData = getArticleStructuredData({
+    structuredDataList,
+  });
 
-  if (imageElements.length !== 1) {
-    return;
+  if (articleStructuredData) {
+    const { image, publisher } = articleStructuredData;
+    const imageURL: unknown = Array.isArray(image) && image[0];
+
+    if (typeof imageURL === "string") {
+      return imageURL;
+    }
+
+    const publisherLogoImageURL =
+      isObject(publisher) && isObject(publisher.logo) && publisher.logo.url;
+
+    if (typeof publisherLogoImageURL === "string") {
+      return publisherLogoImageURL;
+    }
   }
 
-  const imageElement = imageElements[0];
+  const logoStructuredData = structuredDataList.find(
+    (structuredData) => structuredData["@type"] === "Organization"
+  );
 
-  if (!imageElement.complete || imageElement.naturalWidth < 1) {
-    return;
+  if (logoStructuredData) {
+    const { logo } = logoStructuredData;
+
+    if (typeof logo === "string") {
+      return logo;
+    }
   }
-
-  const canvasElement = document.createElement("canvas");
-  const canvasContext = canvasElement.getContext("2d");
-
-  if (!canvasContext) {
-    throw new Error("Canvas is not supported.");
-  }
-
-  canvasElement.width = imageElement.naturalWidth;
-  canvasElement.height = imageElement.naturalHeight;
-  canvasContext.drawImage(imageElement, 0, 0);
-
-  return canvasElement.toDataURL();
 };
 
 const getTitle = () => {
