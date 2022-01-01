@@ -1,4 +1,4 @@
-import { BackgroundMessage } from "./background";
+import { BackgroundMessage } from "./background.mjs";
 
 const sendPage = () => {
   const structuredDataList = [
