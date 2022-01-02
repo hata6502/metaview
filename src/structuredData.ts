@@ -60,6 +60,65 @@ export const getBreadcrumbStructuredDataList = ({
     return type === "BreadcrumbList" ? [structuredData] : [];
   });
 
+export const getEventStructuredData = ({
+  structuredDataList,
+}: {
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const eventStructuredDataList = structuredDataList.flatMap(
+    (structuredData) => {
+      if (!("@type" in structuredData)) {
+        return [];
+      }
+
+      const type = structuredData["@type"];
+
+      return type === "Event" ||
+        type === "BusinessEvent" ||
+        type === "ChildrensEvent" ||
+        type === "ComedyEvent" ||
+        type === "CourseInstance" ||
+        type === "DanceEvent" ||
+        type === "DeliveryEvent" ||
+        type === "EducationEvent" ||
+        type === "EventSeries" ||
+        type === "ExhibitionEvent" ||
+        type === "Festival" ||
+        type === "FoodEvent" ||
+        type === "Hackathon" ||
+        type === "LiteraryEvent" ||
+        type === "MusicEvent" ||
+        type === "PublicationEvent" ||
+        type === "BroadcastEvent" ||
+        type === "OnDemandEvent" ||
+        type === "SaleEvent" ||
+        type === "ScreeningEvent" ||
+        type === "SocialEvent" ||
+        type === "SportsEvent" ||
+        type === "TheaterEvent" ||
+        type === "UserInteraction" ||
+        type === "UserBlocks" ||
+        type === "UserCheckins" ||
+        type === "UserComments" ||
+        type === "UserDownloads" ||
+        type === "UserLikes" ||
+        type === "UserPageVisits" ||
+        type === "UserPlays" ||
+        type === "UserPlusOnes" ||
+        type === "UserTweets" ||
+        type === "VisualArtsEvent"
+        ? [structuredData]
+        : [];
+    }
+  );
+
+  if (eventStructuredDataList.length < 1) {
+    return;
+  }
+
+  return eventStructuredDataList[0];
+};
+
 export const getLogoStructuredData = ({
   structuredDataList,
 }: {

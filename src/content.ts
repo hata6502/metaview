@@ -1,15 +1,32 @@
-import { Product, Thing, WithContext } from "schema-dts";
+import {
+  Article,
+  Event,
+  GeoCoordinates,
+  PostalAddress,
+  Product,
+  Offer,
+  Thing,
+  WithContext,
+} from "schema-dts";
 import { BackgroundMessage } from "./background";
 import { isObject } from "./isObject";
 import {
   getArticleStructuredData,
   getBreadcrumbStructuredDataList,
+  getEventStructuredData,
   getLocalBusinessStructuredData,
   getLogoStructuredData,
   getProductStructuredData,
   isStructuredData,
   removeSchemaURL,
 } from "./structuredData";
+
+const geoCoordinatesToMapURLString = (geoCoordinates: GeoCoordinates) =>
+  (typeof geoCoordinates.latitude === "number" ||
+    typeof geoCoordinates.latitude === "string") &&
+  (typeof geoCoordinates.longitude === "number" ||
+    typeof geoCoordinates.longitude === "string") &&
+  `map https://www.google.com/maps?q=${geoCoordinates.latitude},${geoCoordinates.longitude}`;
 
 const getBreadcrumbs = ({
   structuredDataList,
@@ -44,20 +61,35 @@ const getCreditLine = ({
 }: {
   structuredDataList: WithContext<Thing>[];
 }) => {
+  const eventStructuredData = getEventStructuredData({
+    structuredDataList,
+  });
+
+  const eventStructuredDataPerformer = eventStructuredData?.performer;
+  const eventStructuredDataOrganizer = eventStructuredData?.organizer;
+
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
   });
 
-  const author = articleStructuredData?.author;
-  const publisher = articleStructuredData?.publisher;
+  const articleStructuredDataAuthor = articleStructuredData?.author;
+  const articleStructuredDataPublisher = articleStructuredData?.publisher;
 
   const credits = [
     ...new Set(
       [
-        // @ts-expect-error
-        isObject(author) && author.name,
-        // @ts-expect-error
-        isObject(publisher) && publisher.name,
+        isObject(eventStructuredDataPerformer) &&
+          // @ts-expect-error
+          eventStructuredDataPerformer.name,
+        isObject(eventStructuredDataOrganizer) &&
+          // @ts-expect-error
+          eventStructuredDataOrganizer.name,
+        isObject(articleStructuredDataAuthor) &&
+          // @ts-expect-error
+          articleStructuredDataAuthor.name,
+        isObject(articleStructuredDataPublisher) &&
+          // @ts-expect-error
+          articleStructuredDataPublisher.name,
         ,
         ...[
           ...document.querySelectorAll(
@@ -72,7 +104,7 @@ const getCreditLine = ({
     ),
   ];
 
-  return credits.length >= 1 && `By ${credits.map(stringToHashTag).join(" ")}`;
+  return credits.length >= 1 && `by ${credits.map(stringToHashTag).join(" ")}`;
 };
 
 const getDateLine = ({
@@ -103,6 +135,10 @@ const getDescription = ({
     'meta[property="og:description" i]'
   );
 
+  const eventStructuredDataDescription = getEventStructuredData({
+    structuredDataList,
+  })?.description;
+
   const productStructuredDataDescription = getProductStructuredData({
     structuredDataList,
   })?.description;
@@ -112,6 +148,8 @@ const getDescription = ({
   })?.headline;
 
   return (
+    (typeof eventStructuredDataDescription === "string" &&
+      eventStructuredDataDescription) ||
     (typeof productStructuredDataDescription === "string" &&
       productStructuredDataDescription) ||
     (typeof articleStructuredDataHeadline === "string" &&
@@ -130,52 +168,34 @@ const getDetails = ({
 }) => {
   const detailGroups: unknown[][] = [];
 
-  const productStructuredData = getProductStructuredData({
+  const eventStructuredData = getEventStructuredData({
     structuredDataList,
   });
 
-  if (productStructuredData) {
-    const { brand, name, offers } = productStructuredData;
-    const offer: Product["offers"] = Array.isArray(offers) ? offers[0] : offers;
+  if (eventStructuredData) {
+    const { endDate, location, name, offers, startDate } = eventStructuredData;
+    const offer: Offer | undefined = Array.isArray(offers) ? offers[0] : offers;
 
     detailGroups.push([
       typeof name === "string" && name,
       // @ts-expect-error
-      isObject(brand) && `${stringToHashTag(brand.name)} brand`,
-      offer &&
-        "price" in offer &&
-        (typeof offer.price === "number" || typeof offer.price === "string") &&
-        `${offer.price} ${
-          typeof offer.priceCurrency === "string" ? offer.priceCurrency : ""
-        }`,
-      offer &&
-        "lowPrice" in offer &&
-        (typeof offer.lowPrice === "number" ||
-          typeof offer.lowPrice === "string") &&
-        typeof offer.priceCurrency === "string" &&
-        `${offer.lowPrice} ${
-          typeof offer.highPrice === "number" ||
-          typeof offer.highPrice === "string"
-            ? `~ ${offer.highPrice} `
-            : ""
-        }${offer.priceCurrency}`,
-      offer &&
-        "availability" in offer &&
-        typeof offer.availability === "string" &&
-        removeSchemaURL(offer.availability),
-      offer &&
-        "itemCondition" in offer &&
-        typeof offer.itemCondition === "string" &&
-        removeSchemaURL(offer.itemCondition),
-      offer &&
-        "offerCount" in offer &&
-        typeof offer.offerCount === "number" &&
-        `${offer.offerCount} left`,
-      offer &&
-        "priceValidUntil" in offer &&
-        typeof offer.priceValidUntil === "string" &&
-        `Until ${offer.priceValidUntil}`,
-      ,
+      isObject(location) && "name" in location && `at ${location.name}`,
+      isObject(location) &&
+        // @ts-expect-error
+        isObject(location.address) &&
+        // @ts-expect-error
+        postalAddressToString(location.address),
+      isObject(location) &&
+        // @ts-expect-error
+        location.geo &&
+        // @ts-expect-error
+        "latitude" in location.geo &&
+        // @ts-expect-error
+        geoCoordinatesToMapURLString(location.geo),
+      // @ts-expect-error
+      isObject(location) && location.url,
+      `${startDate ?? ""} ~ ${endDate ?? ""}`,
+      ...(offer ? offerToDetails(offer) : []),
     ]);
   }
 
@@ -199,29 +219,9 @@ const getDetails = ({
 
     detailGroups.push([
       typeof name === "string" && name,
-      isObject(address) &&
-        [
-          // @ts-expect-error
-          "streetAddress" in address && address.streetAddress,
-          // @ts-expect-error
-          "addressLocality" in address && address.addressLocality,
-          // @ts-expect-error
-          "addressRegion" in address && address.addressRegion,
-          // @ts-expect-error
-          "postalCode" in address && address.postalCode,
-          // @ts-expect-error
-          "addressCountry" in address && address.addressCountry,
-        ]
-          .filter((address) => address)
-          .join(", "),
-      geo &&
-        "latitude" in geo &&
-        (typeof geo.latitude === "number" ||
-          typeof geo.latitude === "string") &&
-        "longitude" in geo &&
-        (typeof geo.longitude === "number" ||
-          typeof geo.longitude === "string") &&
-        `Map https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`,
+      // @ts-expect-error
+      isObject(address) && postalAddressToString(address),
+      geo && "latitude" in geo && geoCoordinatesToMapURLString(geo),
       ...(openings
         ? openings.map((opening) =>
             [
@@ -237,6 +237,22 @@ const getDetails = ({
         : []),
       typeof priceRange === "string" && priceRange,
       typeof telephone === "string" && telephone,
+    ]);
+  }
+
+  const productStructuredData = getProductStructuredData({
+    structuredDataList,
+  });
+
+  if (productStructuredData) {
+    const { brand, name, offers } = productStructuredData;
+    const offer: Offer | undefined = Array.isArray(offers) ? offers[0] : offers;
+
+    detailGroups.push([
+      typeof name === "string" && name,
+      // @ts-expect-error
+      isObject(brand) && `${stringToHashTag(brand.name)} brand`,
+      ...(offer ? offerToDetails(offer) : []),
     ]);
   }
 
@@ -273,13 +289,26 @@ const getStructuredDataImageURL = ({
 }: {
   structuredDataList: WithContext<Thing>[];
 }) => {
+  const eventStructuredData = getEventStructuredData({
+    structuredDataList,
+  });
+
+  if (eventStructuredData) {
+    const { image } = eventStructuredData;
+    const imageURL: Event["image"] = Array.isArray(image) ? image[0] : image;
+
+    if (typeof imageURL === "string") {
+      return imageURL;
+    }
+  }
+
   const productStructuredData = getProductStructuredData({
     structuredDataList,
   });
 
   if (productStructuredData) {
     const { image } = productStructuredData;
-    const imageURL: unknown = Array.isArray(image) && image[0];
+    const imageURL: Product["image"] = Array.isArray(image) ? image[0] : image;
 
     if (typeof imageURL === "string") {
       return imageURL;
@@ -292,7 +321,7 @@ const getStructuredDataImageURL = ({
 
   if (articleStructuredData) {
     const { image, publisher } = articleStructuredData;
-    const imageURL: unknown = Array.isArray(image) && image[0];
+    const imageURL: Article["image"] = Array.isArray(image) ? image[0] : image;
 
     if (typeof imageURL === "string") {
       return imageURL;
@@ -328,6 +357,46 @@ const getTitle = () => {
     document.title
   );
 };
+
+const offerToDetails = (offer: Offer) => [
+  "price" in offer &&
+    (typeof offer.price === "number" || typeof offer.price === "string") &&
+    `${offer.price} ${
+      typeof offer.priceCurrency === "string" ? offer.priceCurrency : ""
+    }`,
+  "lowPrice" in offer &&
+    (typeof offer.lowPrice === "number" ||
+      typeof offer.lowPrice === "string") &&
+    typeof offer.priceCurrency === "string" &&
+    `${offer.lowPrice} ${
+      typeof offer.highPrice === "number" || typeof offer.highPrice === "string"
+        ? `~ ${offer.highPrice} `
+        : ""
+    }${offer.priceCurrency}`,
+  "availability" in offer &&
+    typeof offer.availability === "string" &&
+    removeSchemaURL(offer.availability),
+  "itemCondition" in offer &&
+    typeof offer.itemCondition === "string" &&
+    removeSchemaURL(offer.itemCondition),
+  "offerCount" in offer &&
+    typeof offer.offerCount === "number" &&
+    `${offer.offerCount} left`,
+  "priceValidUntil" in offer &&
+    typeof offer.priceValidUntil === "string" &&
+    `until ${offer.priceValidUntil}`,
+];
+
+const postalAddressToString = (postalAddress: PostalAddress) =>
+  [
+    postalAddress.streetAddress,
+    postalAddress.addressLocality,
+    postalAddress.addressRegion,
+    postalAddress.postalCode,
+    postalAddress.addressCountry,
+  ]
+    .filter((postalAddress) => typeof postalAddress === "string")
+    .join(", ");
 
 const stringToHashTag = (string: string) => `#${string.replaceAll(" ", "_")}`;
 
