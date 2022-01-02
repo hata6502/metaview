@@ -3,7 +3,9 @@ import { BackgroundMessage } from "./background";
 import { isObject } from "./isObject";
 import {
   getArticleStructuredData,
+  getBreadcrumbStructuredDataList,
   getLocalBusinessStructuredData,
+  getLogoStructuredData,
   getProductStructuredData,
   isStructuredData,
   removeSchemaURL,
@@ -14,35 +16,26 @@ const getBreadcrumbs = ({
 }: {
   structuredDataList: WithContext<Thing>[];
 }) =>
-  structuredDataList
+  getBreadcrumbStructuredDataList({ structuredDataList })
     .flatMap((structuredData) => {
-      if (
-        !("@type" in structuredData) ||
-        structuredData["@type"] !== "BreadcrumbList"
-      ) {
-        return [];
-      }
-
       const { itemListElement } = structuredData;
 
-      if (!Array.isArray(itemListElement)) {
-        return [];
-      }
+      return Array.isArray(itemListElement)
+        ? [
+            [...itemListElement]
+              .sort((a, b) => a.position - b.position)
+              .flatMap((listItem) => {
+                if (!listItem) {
+                  return [];
+                }
 
-      return [
-        [...itemListElement]
-          .sort((a, b) => a.position - b.position)
-          .flatMap((listItem) => {
-            if (!listItem) {
-              return [];
-            }
+                const name = listItem.item?.name ?? listItem.name;
 
-            const name = listItem.item?.name ?? listItem.name;
-
-            return typeof name === "string" ? [stringToHashTag(name)] : [];
-          })
-          .join(" > "),
-      ];
+                return typeof name === "string" ? [stringToHashTag(name)] : [];
+              })
+              .join(" > "),
+          ]
+        : [];
     })
     .join("\n");
 
@@ -193,14 +186,10 @@ const getDetails = ({
   if (localBusinessStructuredData) {
     const {
       address,
-      // @ts-expect-error
       geo,
       name,
-      // @ts-expect-error
       openingHoursSpecification,
-      // @ts-expect-error
       priceRange,
-      // @ts-expect-error
       telephone,
     } = localBusinessStructuredData;
 
@@ -318,14 +307,12 @@ const getStructuredDataImageURL = ({
     }
   }
 
-  const logoStructuredDataList = structuredDataList.flatMap((structuredData) =>
-    "@type" in structuredData && structuredData["@type"] === "Organization"
-      ? [structuredData]
-      : []
-  );
+  const logoStructuredData = getLogoStructuredData({
+    structuredDataList,
+  });
 
-  if (logoStructuredDataList.length >= 1) {
-    const { logo } = logoStructuredDataList[0];
+  if (logoStructuredData) {
+    const { logo } = logoStructuredData;
 
     if (typeof logo === "string") {
       return logo;
