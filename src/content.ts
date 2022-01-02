@@ -197,10 +197,16 @@ const getDetails = ({
       geo,
       name,
       // @ts-expect-error
+      openingHoursSpecification,
+      // @ts-expect-error
       priceRange,
       // @ts-expect-error
       telephone,
     } = localBusinessStructuredData;
+
+    const openings =
+      (Array.isArray(openingHoursSpecification) && openingHoursSpecification) ||
+      (isObject(openingHoursSpecification) && [openingHoursSpecification]);
 
     detailGroups.push([
       typeof name === "string" && name,
@@ -227,6 +233,19 @@ const getDetails = ({
         (typeof geo.longitude === "number" ||
           typeof geo.longitude === "string") &&
         `Map https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`,
+      ...(openings
+        ? openings.map((opening) =>
+            [
+              (opening.opens || opening.closes) &&
+                `${opening.opens ?? ""} ~ ${opening.closes ?? ""}`,
+              opening.dayOfWeek?.map(removeSchemaURL).join(", "),
+              (opening.validFrom || opening.validThrough) &&
+                `${opening.validFrom ?? ""} ~ ${opening.validThrough ?? ""}`,
+            ]
+              .filter((opening) => opening)
+              .join(" ")
+          )
+        : []),
       typeof priceRange === "string" && priceRange,
       typeof telephone === "string" && telephone,
     ]);
