@@ -89,3 +89,6 @@ export const isStructuredData = (
     isObject(unknown) && structuredDataContexts.includes(unknown["@context"])
   );
 };
+
+export const removeSchemaURL = (string: string) =>
+  string.replace("http://schema.org/", "").replace("https://schema.org/", "");

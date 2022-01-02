@@ -3,86 +3,11 @@ import { BackgroundMessage } from "./background";
 import { isObject } from "./isObject";
 import {
   getArticleStructuredData,
+  getLocalBusinessStructuredData,
   getProductStructuredData,
   isStructuredData,
+  removeSchemaURL,
 } from "./structuredData";
-
-const sendPage = () => {
-  const structuredDataList = [
-    ...document.querySelectorAll('script[type="application/ld+json" i]'),
-  ].flatMap((jsonLDElement) => {
-    if (!(jsonLDElement instanceof HTMLScriptElement)) {
-      return [];
-    }
-
-    try {
-      const jsonLD: unknown = JSON.parse(jsonLDElement.innerText);
-      const jsonLDDocuments: unknown[] = Array.isArray(jsonLD)
-        ? jsonLD
-        : [jsonLD];
-
-      return jsonLDDocuments.flatMap((jsonLDDocument) =>
-        isStructuredData(jsonLDDocument) ? [jsonLDDocument] : []
-      );
-    } catch (exception) {
-      console.error(exception);
-
-      return [];
-    }
-  });
-
-  const url = location.href;
-  const title = getTitle();
-
-  const ogImageElement = document.querySelector('meta[property="og:image" i]');
-  const iconElement = document.querySelector('link[rel="icon" i]');
-
-  const imageURL =
-    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
-    getStructuredDataImageURL({ structuredDataList }) ||
-    (iconElement instanceof HTMLLinkElement && iconElement.href) ||
-    undefined;
-
-  const backgroundMessage: BackgroundMessage = {
-    url,
-    description: `${[
-      title,
-      url,
-      [
-        getDateLine({ structuredDataList }),
-        getCreditLine({ structuredDataList }),
-      ]
-        .filter((line) => line)
-        .join("\n"),
-      getBreadcrumbs({ structuredDataList }),
-      getDetails({ structuredDataList }),
-      getDescription({ structuredDataList }),
-      getHashTagLine(),
-    ]
-      .filter((line) => line)
-      .join("\n\n")}\n\n`,
-    imageURL,
-    metadata: [
-      ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) =>
-        metaElement instanceof HTMLMetaElement
-          ? [`${metaElement.name}:${metaElement.content}`]
-          : []
-      ),
-      ...[
-        ...document.querySelectorAll('script[type="application/ld+json" i]'),
-      ].flatMap((scriptElement) =>
-        scriptElement instanceof HTMLElement ? [scriptElement.innerText] : []
-      ),
-    ].join(" "),
-    title,
-  };
-
-  chrome.runtime.sendMessage(backgroundMessage);
-};
-
-document.addEventListener("DOMContentLoaded", sendPage);
-addEventListener("load", sendPage);
-setInterval(sendPage, 1000);
 
 const getBreadcrumbs = ({
   structuredDataList,
@@ -244,15 +169,11 @@ const getDetails = ({
       offer &&
         "availability" in offer &&
         typeof offer.availability === "string" &&
-        offer.availability
-          .replace("http://schema.org/", "")
-          .replace("https://schema.org/", ""),
+        removeSchemaURL(offer.availability),
       offer &&
         "itemCondition" in offer &&
         typeof offer.itemCondition === "string" &&
-        offer.itemCondition
-          .replace("http://schema.org/", "")
-          .replace("https://schema.org/", ""),
+        removeSchemaURL(offer.itemCondition),
       offer &&
         "offerCount" in offer &&
         typeof offer.offerCount === "number" &&
@@ -262,6 +183,71 @@ const getDetails = ({
         typeof offer.priceValidUntil === "string" &&
         `Until ${offer.priceValidUntil}`,
       ,
+    ]);
+  }
+
+  const localBusinessStructuredData = getLocalBusinessStructuredData({
+    structuredDataList,
+  });
+
+  if (localBusinessStructuredData) {
+    const {
+      address,
+      // @ts-expect-error
+      geo,
+      name,
+      // @ts-expect-error
+      openingHoursSpecification,
+      // @ts-expect-error
+      priceRange,
+      // @ts-expect-error
+      telephone,
+    } = localBusinessStructuredData;
+
+    const openings =
+      (Array.isArray(openingHoursSpecification) && openingHoursSpecification) ||
+      (isObject(openingHoursSpecification) && [openingHoursSpecification]);
+
+    detailGroups.push([
+      typeof name === "string" && name,
+      isObject(address) &&
+        [
+          // @ts-expect-error
+          "streetAddress" in address && address.streetAddress,
+          // @ts-expect-error
+          "addressLocality" in address && address.addressLocality,
+          // @ts-expect-error
+          "addressRegion" in address && address.addressRegion,
+          // @ts-expect-error
+          "postalCode" in address && address.postalCode,
+          // @ts-expect-error
+          "addressCountry" in address && address.addressCountry,
+        ]
+          .filter((address) => address)
+          .join(", "),
+      geo &&
+        "latitude" in geo &&
+        (typeof geo.latitude === "number" ||
+          typeof geo.latitude === "string") &&
+        "longitude" in geo &&
+        (typeof geo.longitude === "number" ||
+          typeof geo.longitude === "string") &&
+        `Map https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`,
+      ...(openings
+        ? openings.map((opening) =>
+            [
+              (opening.opens || opening.closes) &&
+                `${opening.opens ?? ""} ~ ${opening.closes ?? ""}`,
+              opening.dayOfWeek?.map(removeSchemaURL).join(", "),
+              (opening.validFrom || opening.validThrough) &&
+                `${opening.validFrom ?? ""} ~ ${opening.validThrough ?? ""}`,
+            ]
+              .filter((opening) => opening)
+              .join(" ")
+          )
+        : []),
+      typeof priceRange === "string" && priceRange,
+      typeof telephone === "string" && telephone,
     ]);
   }
 
@@ -357,3 +343,80 @@ const getTitle = () => {
 };
 
 const stringToHashTag = (string: string) => `#${string.replaceAll(" ", "_")}`;
+
+const sendPage = () => {
+  const structuredDataList = [
+    ...document.querySelectorAll('script[type="application/ld+json" i]'),
+  ].flatMap((jsonLDElement) => {
+    if (!(jsonLDElement instanceof HTMLScriptElement)) {
+      return [];
+    }
+
+    try {
+      const jsonLD: unknown = JSON.parse(jsonLDElement.innerText);
+      const jsonLDDocuments: unknown[] = Array.isArray(jsonLD)
+        ? jsonLD
+        : [jsonLD];
+
+      return jsonLDDocuments.flatMap((jsonLDDocument) =>
+        isStructuredData(jsonLDDocument) ? [jsonLDDocument] : []
+      );
+    } catch (exception) {
+      console.error(exception);
+
+      return [];
+    }
+  });
+
+  const url = location.href;
+  const title = getTitle();
+
+  const ogImageElement = document.querySelector('meta[property="og:image" i]');
+  const iconElement = document.querySelector('link[rel="icon" i]');
+
+  const imageURL =
+    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
+    getStructuredDataImageURL({ structuredDataList }) ||
+    (iconElement instanceof HTMLLinkElement && iconElement.href) ||
+    undefined;
+
+  const backgroundMessage: BackgroundMessage = {
+    url,
+    description: `${[
+      title,
+      url,
+      [
+        getDateLine({ structuredDataList }),
+        getCreditLine({ structuredDataList }),
+      ]
+        .filter((line) => line)
+        .join("\n"),
+      getBreadcrumbs({ structuredDataList }),
+      getDetails({ structuredDataList }),
+      getDescription({ structuredDataList }),
+      getHashTagLine(),
+    ]
+      .filter((line) => line)
+      .join("\n\n")}\n\n`,
+    imageURL,
+    metadata: [
+      ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) =>
+        metaElement instanceof HTMLMetaElement
+          ? [`${metaElement.name}:${metaElement.content}`]
+          : []
+      ),
+      ...[
+        ...document.querySelectorAll('script[type="application/ld+json" i]'),
+      ].flatMap((scriptElement) =>
+        scriptElement instanceof HTMLElement ? [scriptElement.innerText] : []
+      ),
+    ].join(" "),
+    title,
+  };
+
+  chrome.runtime.sendMessage(backgroundMessage);
+};
+
+sendPage();
+addEventListener("load", sendPage);
+setInterval(sendPage, 1000);
