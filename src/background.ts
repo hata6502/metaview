@@ -1,7 +1,6 @@
 interface PageValue {
   description: string;
   imageURL: string | undefined;
-  metadata: string;
   title: string;
 }
 
@@ -12,11 +11,10 @@ export interface BackgroundMessage extends PageValue {
 }
 
 chrome.runtime.onMessage.addListener(
-  ({ url, description, imageURL, metadata, title }: BackgroundMessage) => {
+  ({ url, description, imageURL, title }: BackgroundMessage) => {
     pageMap.set(url, {
       description,
       imageURL,
-      metadata,
       title,
     });
   }
@@ -88,11 +86,7 @@ chrome.bookmarks.onCreated.addListener(async (_id, bookmark) => {
     formData.append("desc", page.description);
     formData.append("image_url", result);
     formData.append("referer_url", url);
-
-    formData.append(
-      "title",
-      `${page.title}　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　${page.metadata}`
-    );
+    formData.append("title", page.title);
 
     const uploadResponse = await fetch(
       "https://upload.gyazo.com/api/upload/easy_auth",

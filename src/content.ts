@@ -455,18 +455,6 @@ const sendPage = () => {
       .filter((line) => line)
       .join("\n\n")}\n\n`,
     imageURL,
-    metadata: [
-      ...[...document.querySelectorAll("meta[name]")].flatMap((metaElement) =>
-        metaElement instanceof HTMLMetaElement
-          ? [`${metaElement.name}:${metaElement.content}`]
-          : []
-      ),
-      ...[
-        ...document.querySelectorAll('script[type="application/ld+json" i]'),
-      ].flatMap((scriptElement) =>
-        scriptElement instanceof HTMLElement ? [scriptElement.innerText] : []
-      ),
-    ].join(" "),
     title,
   };
 
