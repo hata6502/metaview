@@ -7,6 +7,7 @@ import {
   Product,
   Offer,
   Thing,
+  VideoObject,
   WithContext,
 } from "schema-dts";
 import { BackgroundMessage } from "./background";
@@ -358,8 +359,14 @@ const getStructuredDataImageURL = ({
   if (videoObjectStructuredData) {
     const { thumbnailUrl } = videoObjectStructuredData;
 
-    if (typeof thumbnailUrl === "string") {
-      return thumbnailUrl;
+    const firstThumbnailUrl: VideoObject["thumbnailUrl"] = Array.isArray(
+      thumbnailUrl
+    )
+      ? thumbnailUrl[0]
+      : thumbnailUrl;
+
+    if (typeof firstThumbnailUrl === "string") {
+      return firstThumbnailUrl;
     }
   }
 
@@ -470,8 +477,8 @@ const sendPage = () => {
   const iconElement = document.querySelector('link[rel="icon" i]');
 
   const imageURL =
-    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
     getStructuredDataImageURL({ structuredDataList }) ||
+    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
     (iconElement instanceof HTMLLinkElement && iconElement.href) ||
     undefined;
 
