@@ -593,6 +593,32 @@ export const getLocalBusinessStructuredData = ({
   return localBusinessStructuredDataList[0];
 };
 
+export const getVideoObjectStructuredData = ({
+  structuredDataList,
+}: {
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const videoObjectStructuredDataList = structuredDataList.flatMap(
+    (structuredData) => {
+      if (!("@type" in structuredData)) {
+        return [];
+      }
+
+      const type = structuredData["@type"];
+
+      return type === "VideoObject" || type === "VideoObjectSnapshot"
+        ? [structuredData]
+        : [];
+    }
+  );
+
+  if (videoObjectStructuredDataList.length < 1) {
+    return;
+  }
+
+  return videoObjectStructuredDataList[0];
+};
+
 export const isStructuredData = (
   unknown: unknown
 ): unknown is WithContext<Thing> => {

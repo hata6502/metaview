@@ -1,5 +1,6 @@
 import {
   Article,
+  Clip,
   Event,
   GeoCoordinates,
   PostalAddress,
@@ -17,6 +18,7 @@ import {
   getLocalBusinessStructuredData,
   getLogoStructuredData,
   getProductStructuredData,
+  getVideoObjectStructuredData,
   isStructuredData,
   removeSchemaURL,
 } from "./structuredData";
@@ -143,6 +145,10 @@ const getDescription = ({
     structuredDataList,
   })?.description;
 
+  const videoObjectStructuredDataDescription = getVideoObjectStructuredData({
+    structuredDataList,
+  })?.description;
+
   const articleStructuredDataHeadline = getArticleStructuredData({
     structuredDataList,
   })?.headline;
@@ -152,6 +158,8 @@ const getDescription = ({
       eventStructuredDataDescription) ||
     (typeof productStructuredDataDescription === "string" &&
       productStructuredDataDescription) ||
+    (typeof videoObjectStructuredDataDescription === "string" &&
+      videoObjectStructuredDataDescription) ||
     (typeof articleStructuredDataHeadline === "string" &&
       articleStructuredDataHeadline) ||
     (ogDescriptionElement instanceof HTMLMetaElement &&
@@ -256,6 +264,34 @@ const getDetails = ({
     ]);
   }
 
+  const videoObjectStructuredData = getVideoObjectStructuredData({
+    structuredDataList,
+  });
+
+  if (videoObjectStructuredData) {
+    const { duration, expires, hasPart, name, publication, uploadDate } =
+      videoObjectStructuredData;
+
+    const clips: Clip[] = Array.isArray(hasPart) ? hasPart : [];
+
+    detailGroups.push([
+      typeof name === "string" && name,
+      `${uploadDate ?? ""} ~ ${expires ?? ""}`,
+      isObject(publication) &&
+        // @ts-expect-error
+        publication.isLiveBroadcast &&
+        // @ts-expect-error
+        `Live ${publication.startDate ?? ""} ~ ${publication.endDate ?? ""}`,
+      typeof duration === "string" && duration,
+      ...clips.map(
+        (clip) =>
+          `${clip.name} ${clip.startOffset ? `${clip.startOffset} s` : ""} ~ ${
+            clip.endOffset ? `${clip.endOffset} s` : ""
+          } ${clip.url}`
+      ),
+    ]);
+  }
+
   return detailGroups
     .map((detailGroup) =>
       detailGroup
@@ -315,6 +351,18 @@ const getStructuredDataImageURL = ({
     }
   }
 
+  const videoObjectStructuredData = getVideoObjectStructuredData({
+    structuredDataList,
+  });
+
+  if (videoObjectStructuredData) {
+    const { thumbnailUrl } = videoObjectStructuredData;
+
+    if (typeof thumbnailUrl === "string") {
+      return thumbnailUrl;
+    }
+  }
+
   const articleStructuredData = getArticleStructuredData({
     structuredDataList,
   });
@@ -347,15 +395,6 @@ const getStructuredDataImageURL = ({
       return logo;
     }
   }
-};
-
-const getTitle = () => {
-  const ogTitleElement = document.querySelector('meta[property="og:title" i]');
-
-  return (
-    (ogTitleElement instanceof HTMLMetaElement && ogTitleElement.content) ||
-    document.title
-  );
 };
 
 const offerToDetails = (offer: Offer) => [
@@ -425,7 +464,7 @@ const sendPage = () => {
   });
 
   const url = location.href;
-  const title = getTitle();
+  const title = document.title;
 
   const ogImageElement = document.querySelector('meta[property="og:image" i]');
   const iconElement = document.querySelector('link[rel="icon" i]');
