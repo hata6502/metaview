@@ -29,7 +29,7 @@ const geoCoordinatesToMapURLString = (geoCoordinates: GeoCoordinates) =>
     typeof geoCoordinates.latitude === "string") &&
   (typeof geoCoordinates.longitude === "number" ||
     typeof geoCoordinates.longitude === "string") &&
-  `map [https://www.google.com/maps?q=${geoCoordinates.latitude},${geoCoordinates.longitude}]`;
+  `[N${geoCoordinates.latitude},E${geoCoordinates.longitude}]`;
 
 const getBreadcrumbs = ({
   structuredDataList,
