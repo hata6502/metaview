@@ -3,6 +3,10 @@ const config = {
   entry: {
     background: "./src/background.ts",
     content: "./src/content.ts",
+    options: "./src/options.ts",
+  },
+  experiments: {
+    topLevelAwait: true,
   },
   module: {
     rules: [

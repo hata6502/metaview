@@ -29,7 +29,7 @@ const geoCoordinatesToMapURLString = (geoCoordinates: GeoCoordinates) =>
     typeof geoCoordinates.latitude === "string") &&
   (typeof geoCoordinates.longitude === "number" ||
     typeof geoCoordinates.longitude === "string") &&
-  `map https://www.google.com/maps?q=${geoCoordinates.latitude},${geoCoordinates.longitude}`;
+  `map [https://www.google.com/maps?q=${geoCoordinates.latitude},${geoCoordinates.longitude}]`;
 
 const getBreadcrumbs = ({
   structuredDataList,
@@ -51,7 +51,7 @@ const getBreadcrumbs = ({
 
                 const name = listItem.item?.name ?? listItem.name;
 
-                return typeof name === "string" ? [stringToHashTag(name)] : [];
+                return typeof name === "string" ? [`[${name}]`] : [];
               })
               .join(" > "),
           ]
@@ -107,7 +107,10 @@ const getCreditLine = ({
     ),
   ];
 
-  return credits.length >= 1 && `by ${credits.map(stringToHashTag).join(" ")}`;
+  return (
+    credits.length >= 1 &&
+    `by ${credits.map((credit) => `[${credit}]`).join(" ")}`
+  );
 };
 
 const getDateLine = ({
@@ -186,9 +189,9 @@ const getDetails = ({
     const offer: Offer | undefined = Array.isArray(offers) ? offers[0] : offers;
 
     detailGroups.push([
-      typeof name === "string" && name,
+      typeof name === "string" && `[${name}]`,
       // @ts-expect-error
-      isObject(location) && "name" in location && `at ${location.name}`,
+      isObject(location) && "name" in location && `at [${location.name}]`,
       isObject(location) &&
         // @ts-expect-error
         isObject(location.address) &&
@@ -227,7 +230,7 @@ const getDetails = ({
       (isObject(openingHoursSpecification) && [openingHoursSpecification]);
 
     detailGroups.push([
-      typeof name === "string" && name,
+      typeof name === "string" && `[${name}]`,
       // @ts-expect-error
       isObject(address) && postalAddressToString(address),
       geo && "latitude" in geo && geoCoordinatesToMapURLString(geo),
@@ -258,9 +261,9 @@ const getDetails = ({
     const offer: Offer | undefined = Array.isArray(offers) ? offers[0] : offers;
 
     detailGroups.push([
-      typeof name === "string" && name,
+      typeof name === "string" && `[${name}]`,
       // @ts-expect-error
-      isObject(brand) && `${stringToHashTag(brand.name)} brand`,
+      isObject(brand) && `[${brand.name}] brand`,
       ...(offer ? offerToDetails(offer) : []),
     ]);
   }
@@ -276,7 +279,7 @@ const getDetails = ({
     const clips: Clip[] = Array.isArray(hasPart) ? hasPart : [];
 
     detailGroups.push([
-      typeof name === "string" && name,
+      typeof name === "string" && `[${name}]`,
       `${uploadDate ?? ""} ~ ${expires ?? ""}`,
       isObject(publication) &&
         // @ts-expect-error
@@ -295,11 +298,7 @@ const getDetails = ({
 
   return detailGroups
     .map((detailGroup) =>
-      detailGroup
-        .flatMap((detail) =>
-          typeof detail === "string" ? [`- ${detail}`] : []
-        )
-        .join("\n")
+      detailGroup.filter((detail) => typeof detail === "string").join("\n")
     )
     .filter((detailGroup) => detailGroup)
     .join("\n\n");
@@ -441,7 +440,9 @@ const postalAddressToString = (postalAddress: PostalAddress) =>
     postalAddress.postalCode,
     postalAddress.addressCountry,
   ]
-    .filter((postalAddress) => typeof postalAddress === "string")
+    .flatMap((postalAddress) =>
+      typeof postalAddress === "string" ? [`[${postalAddress}]`] : []
+    )
     .join(", ");
 
 const stringToHashTag = (string: string) => `#${string.replaceAll(" ", "_")}`;
@@ -471,7 +472,6 @@ const sendPage = () => {
   });
 
   const url = location.href;
-  const title = document.title;
 
   const ogImageElement = document.querySelector('meta[property="og:image" i]');
   const iconElement = document.querySelector('link[rel="icon" i]');
@@ -484,9 +484,9 @@ const sendPage = () => {
 
   const backgroundMessage: BackgroundMessage = {
     url,
-    description: `${[
-      title,
-      url,
+    body: `${[
+      imageURL && `[${imageURL}]`,
+      `[${url}]`,
       [
         getDateLine({ structuredDataList }),
         getCreditLine({ structuredDataList }),
@@ -499,9 +499,11 @@ const sendPage = () => {
       getHashTagLine(),
     ]
       .filter((line) => line)
-      .join("\n\n")}\n\n`,
-    imageURL,
-    title,
+      .join("\n\n")
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n")}\n\n`,
+    title: document.title,
   };
 
   chrome.runtime.sendMessage(backgroundMessage);
