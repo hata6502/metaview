@@ -1,14 +1,14 @@
 {
-  "name": "zukan",
+  "name": "metaview",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://github.com/hata6502/zukan#readme",
+  "homepage": "https://github.com/hata6502/metaview#readme",
   "bugs": {
-    "url": "https://github.com/hata6502/zukan/issues"
+    "url": "https://github.com/hata6502/metaview/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hata6502/zukan.git"
+    "url": "git+https://github.com/hata6502/metaview.git"
   },
   "license": "CC0-1.0",
   "author": "Tomoyuki Hata",

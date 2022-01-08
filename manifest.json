@@ -1,8 +1,8 @@
 {
-  "name": "zukan",
+  "name": "metaview",
   "version": "1.3.0",
   "manifest_version": 3,
-  "description": "Bookmark web pages to Gyazo. ",
+  "description": "Bookmark web pages to Scrapbox. ",
   "background": {
     "service_worker": "dist/background.js"
   },
