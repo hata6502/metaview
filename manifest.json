@@ -1,6 +1,6 @@
 {
   "name": "metaview",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "manifest_version": 3,
   "description": "Bookmark web pages to Scrapbox. ",
   "background": {
