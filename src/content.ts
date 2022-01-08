@@ -185,11 +185,10 @@ const getDetails = ({
   });
 
   if (eventStructuredData) {
-    const { endDate, location, name, offers, startDate } = eventStructuredData;
+    const { endDate, location, offers, startDate } = eventStructuredData;
     const offer: Offer | undefined = Array.isArray(offers) ? offers[0] : offers;
 
     detailGroups.push([
-      typeof name === "string" && `[${name}]`,
       // @ts-expect-error
       isObject(location) && "name" in location && `at [${location.name}]`,
       isObject(location) &&
@@ -216,21 +215,14 @@ const getDetails = ({
   });
 
   if (localBusinessStructuredData) {
-    const {
-      address,
-      geo,
-      name,
-      openingHoursSpecification,
-      priceRange,
-      telephone,
-    } = localBusinessStructuredData;
+    const { address, geo, openingHoursSpecification, priceRange, telephone } =
+      localBusinessStructuredData;
 
     const openings =
       (Array.isArray(openingHoursSpecification) && openingHoursSpecification) ||
       (isObject(openingHoursSpecification) && [openingHoursSpecification]);
 
     detailGroups.push([
-      typeof name === "string" && `[${name}]`,
       // @ts-expect-error
       isObject(address) && postalAddressToString(address),
       geo && "latitude" in geo && geoCoordinatesToMapURLString(geo),
@@ -257,11 +249,10 @@ const getDetails = ({
   });
 
   if (productStructuredData) {
-    const { brand, name, offers } = productStructuredData;
+    const { brand, offers } = productStructuredData;
     const offer: Offer | undefined = Array.isArray(offers) ? offers[0] : offers;
 
     detailGroups.push([
-      typeof name === "string" && `[${name}]`,
       // @ts-expect-error
       isObject(brand) && `[${brand.name}] brand`,
       ...(offer ? offerToDetails(offer) : []),
@@ -273,13 +264,12 @@ const getDetails = ({
   });
 
   if (videoObjectStructuredData) {
-    const { duration, expires, hasPart, name, publication, uploadDate } =
+    const { duration, expires, hasPart, publication, uploadDate } =
       videoObjectStructuredData;
 
     const clips: Clip[] = Array.isArray(hasPart) ? hasPart : [];
 
     detailGroups.push([
-      typeof name === "string" && `[${name}]`,
       `${uploadDate ?? ""} ~ ${expires ?? ""}`,
       isObject(publication) &&
         // @ts-expect-error
@@ -403,6 +393,45 @@ const getStructuredDataImageURL = ({
   }
 };
 
+const getTitle = ({
+  structuredDataList,
+}: {
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const eventStructuredDataName = getEventStructuredData({
+    structuredDataList,
+  })?.name;
+
+  const localBusinessStructuredDataName = getLocalBusinessStructuredData({
+    structuredDataList,
+  })?.name;
+
+  const productStructuredDataName = getProductStructuredData({
+    structuredDataList,
+  })?.name;
+
+  const videoObjectStructuredDataName = getVideoObjectStructuredData({
+    structuredDataList,
+  })?.name;
+
+  const articleStructuredDataHeadline = getArticleStructuredData({
+    structuredDataList,
+  })?.headline;
+
+  return (
+    (typeof eventStructuredDataName === "string" && eventStructuredDataName) ||
+    (typeof localBusinessStructuredDataName === "string" &&
+      localBusinessStructuredDataName) ||
+    (typeof productStructuredDataName === "string" &&
+      productStructuredDataName) ||
+    (typeof videoObjectStructuredDataName === "string" &&
+      videoObjectStructuredDataName) ||
+    (typeof articleStructuredDataHeadline === "string" &&
+      articleStructuredDataHeadline) ||
+    document.title
+  );
+};
+
 const offerToDetails = (offer: Offer) => [
   "price" in offer &&
     (typeof offer.price === "number" || typeof offer.price === "string") &&
@@ -503,7 +532,7 @@ const sendPage = () => {
       .split("\n")
       .map((line) => `> ${line}`)
       .join("\n")}\n\n`,
-    title: document.title,
+    title: getTitle({ structuredDataList }),
   };
 
   chrome.runtime.sendMessage(backgroundMessage);
