@@ -477,8 +477,8 @@ const sendPage = () => {
   const iconElement = document.querySelector('link[rel="icon" i]');
 
   const imageURL =
-    getStructuredDataImageURL({ structuredDataList }) ||
     (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
+    getStructuredDataImageURL({ structuredDataList }) ||
     (iconElement instanceof HTMLLinkElement && iconElement.href) ||
     undefined;
 
