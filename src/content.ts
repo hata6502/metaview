@@ -414,9 +414,9 @@ const getTitle = ({
     structuredDataList,
   })?.name;
 
-  const articleStructuredDataHeadline = getArticleStructuredData({
+  const articleStructuredDataName = getArticleStructuredData({
     structuredDataList,
-  })?.headline;
+  })?.name;
 
   return (
     (typeof eventStructuredDataName === "string" && eventStructuredDataName) ||
@@ -426,8 +426,8 @@ const getTitle = ({
       productStructuredDataName) ||
     (typeof videoObjectStructuredDataName === "string" &&
       videoObjectStructuredDataName) ||
-    (typeof articleStructuredDataHeadline === "string" &&
-      articleStructuredDataHeadline) ||
+    (typeof articleStructuredDataName === "string" &&
+      articleStructuredDataName) ||
     document.title
   );
 };
@@ -514,6 +514,7 @@ const sendPage = () => {
   const backgroundMessage: BackgroundMessage = {
     url,
     body: `${[
+      getBreadcrumbs({ structuredDataList }),
       imageURL && `[${imageURL}]`,
       `[${url}]`,
       [
@@ -522,7 +523,6 @@ const sendPage = () => {
       ]
         .filter((line) => line)
         .join("\n"),
-      getBreadcrumbs({ structuredDataList }),
       getDetails({ structuredDataList }),
       getDescription({ structuredDataList }),
       getHashTagLine(),
