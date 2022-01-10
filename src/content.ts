@@ -515,7 +515,8 @@ const sendPage = () => {
     url,
     body: `${[
       getBreadcrumbs({ structuredDataList }),
-      imageURL && `[${imageURL}]`,
+      // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
+      imageURL && `[${imageURL}#.png]`,
       `[${url}]`,
       [
         getDateLine({ structuredDataList }),
