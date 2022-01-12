@@ -103,6 +103,7 @@ const getCreditLine = ({
             ? [creditElement.content]
             : []
         ),
+        location.hostname,
       ].flatMap((credit) => (typeof credit === "string" ? [credit] : []))
     ),
   ];
