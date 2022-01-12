@@ -3,8 +3,17 @@
   "version": "2.0.2",
   "manifest_version": 3,
   "description": "Bookmark web pages to Scrapbox. ",
+  "action": {},
   "background": {
     "service_worker": "dist/background.js"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+M",
+        "mac": "Command+M"
+      }
+    }
   },
   "content_scripts": [
     {
@@ -15,5 +24,5 @@
   ],
   "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
   "options_page": "options.html",
-  "permissions": ["bookmarks", "storage"]
+  "permissions": ["storage"]
 }

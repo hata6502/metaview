@@ -538,7 +538,6 @@ const sendPage = () => {
   });
 
   const backgroundMessage: BackgroundMessage = {
-    url: location.href,
     body: `${getBody({ structuredDataList })
       .split("\n")
       .map((line) => `> ${line}`)

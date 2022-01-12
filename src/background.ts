@@ -1,28 +1,32 @@
 import { initialStorageValues } from "./initialStorageValues";
 
-interface PageValue {
+export interface BackgroundMessage {
   body: string;
   title: string;
 }
 
-const pageMap = new Map<string, PageValue>();
-
-export interface BackgroundMessage extends PageValue {
-  url: string;
-}
+const pageMap = new Map<number, BackgroundMessage>();
 
 chrome.runtime.onMessage.addListener(
-  ({ url, body, title }: BackgroundMessage) => pageMap.set(url, { body, title })
+  ({ body, title }: BackgroundMessage, sender) => {
+    const tabID = sender.tab?.id;
+
+    if (tabID === undefined) {
+      return;
+    }
+
+    pageMap.set(tabID, { body, title });
+  }
 );
 
-chrome.bookmarks.onCreated.addListener(async (_id, bookmark) => {
-  const { url } = bookmark;
+chrome.action.onClicked.addListener(async (tab) => {
+  const tabID = tab.id;
 
-  if (!url) {
+  if (tabID === undefined) {
     return;
   }
 
-  const page = pageMap.get(url);
+  const page = pageMap.get(tabID);
 
   if (!page) {
     throw new Error("No page found for bookmark");
