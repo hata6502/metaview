@@ -31,6 +31,42 @@ const geoCoordinatesToMapURLString = (geoCoordinates: GeoCoordinates) =>
     typeof geoCoordinates.longitude === "string") &&
   `[N${geoCoordinates.latitude},E${geoCoordinates.longitude}]`;
 
+const getBody = ({
+  structuredDataList,
+}: {
+  structuredDataList: WithContext<Thing>[];
+}) => {
+  const selectedText = getSelection()?.toString();
+
+  if (selectedText) {
+    return selectedText;
+  }
+
+  const ogImageElement = document.querySelector('meta[property="og:image" i]');
+  const iconElement = document.querySelector('link[rel="icon" i]');
+
+  const imageURL =
+    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
+    getStructuredDataImageURL({ structuredDataList }) ||
+    (iconElement instanceof HTMLLinkElement && iconElement.href) ||
+    undefined;
+
+  return [
+    getBreadcrumbs({ structuredDataList }),
+    // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
+    imageURL && `[${imageURL}#.png]`,
+    `[${location.href}]`,
+    [getDateLine({ structuredDataList }), getCreditLine({ structuredDataList })]
+      .filter((line) => line)
+      .join("\n"),
+    getDetails({ structuredDataList }),
+    getDescription({ structuredDataList }),
+    getHashTagLine(),
+  ]
+    .filter((line) => line)
+    .join("\n\n");
+};
+
 const getBreadcrumbs = ({
   structuredDataList,
 }: {
@@ -501,39 +537,12 @@ const sendPage = () => {
     }
   });
 
-  const url = location.href;
-
-  const ogImageElement = document.querySelector('meta[property="og:image" i]');
-  const iconElement = document.querySelector('link[rel="icon" i]');
-
-  const imageURL =
-    (ogImageElement instanceof HTMLMetaElement && ogImageElement.content) ||
-    getStructuredDataImageURL({ structuredDataList }) ||
-    (iconElement instanceof HTMLLinkElement && iconElement.href) ||
-    undefined;
-
   const backgroundMessage: BackgroundMessage = {
-    url,
-    body: `${[
-      getBreadcrumbs({ structuredDataList }),
-      // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
-      imageURL && `[${imageURL}#.png]`,
-      `[${url}]`,
-      [
-        getDateLine({ structuredDataList }),
-        getCreditLine({ structuredDataList }),
-      ]
-        .filter((line) => line)
-        .join("\n"),
-      getDetails({ structuredDataList }),
-      getDescription({ structuredDataList }),
-      getHashTagLine(),
-    ]
-      .filter((line) => line)
-      .join("\n\n")
+    url: location.href,
+    body: `${getBody({ structuredDataList })
       .split("\n")
       .map((line) => `> ${line}`)
-      .join("\n")}\n\n`,
+      .join("\n")}\n`,
     title: getTitle({ structuredDataList }),
   };
 
