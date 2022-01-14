@@ -36,7 +36,7 @@ const getBody = ({
 }: {
   structuredDataList: WithContext<Thing>[];
 }) => {
-  const selectedText = getSelection()?.toString();
+  const selectedText = getSelectedText();
 
   if (selectedText) {
     return selectedText;
@@ -344,6 +344,44 @@ const getHashTagLine = () => {
   });
 
   return keywords.map(stringToHashTag).join(" ");
+};
+
+const getSelectedText = () => {
+  const selection = getSelection();
+
+  if (!selection) {
+    return;
+  }
+
+  return [...Array(selection.rangeCount).keys()]
+    .map((rangeIndex) => {
+      const range = selection.getRangeAt(rangeIndex);
+      const documentFragment = range.cloneContents();
+
+      documentFragment.querySelectorAll("a").forEach((anchorElement) => {
+        if (!anchorElement.innerText) {
+          return;
+        }
+
+        anchorElement.prepend("[");
+        anchorElement.append("]");
+      });
+
+      documentFragment.querySelectorAll("img").forEach((imageElement) => {
+        if (!imageElement.src) {
+          return;
+        }
+
+        imageElement.after(`[${imageElement.src}]`);
+      });
+
+      const rangeToGetText = new Range();
+
+      rangeToGetText.selectNodeContents(documentFragment);
+
+      return rangeToGetText.toString();
+    })
+    .join("");
 };
 
 const getStructuredDataImageURL = ({
