@@ -56,12 +56,11 @@ const getBody = ({
     // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
     imageURL && `[${imageURL}#.png]`,
     `[${location.href}]`,
-    [getDateLine({ structuredDataList }), getCreditLine({ structuredDataList })]
-      .filter((line) => line)
-      .join("\n"),
+    getDateLine({ structuredDataList }),
     getDetails({ structuredDataList }),
     getDescription({ structuredDataList }),
     getHashTagLine(),
+    getCreditLine({ structuredDataList }),
   ]
     .filter((line) => line)
     .join("\n\n");
