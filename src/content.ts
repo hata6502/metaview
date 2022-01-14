@@ -372,7 +372,8 @@ const getSelectedText = () => {
           return;
         }
 
-        imageElement.after(`[${imageElement.src}]`);
+        // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
+        imageElement.after(`[${imageElement.src}#.png]`);
       });
 
       const rangeToGetText = new Range();
