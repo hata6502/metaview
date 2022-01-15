@@ -359,10 +359,11 @@ const getSelectedText = () => {
       const documentFragment = range.cloneContents();
 
       documentFragment.querySelectorAll("a").forEach((anchorElement) => {
-        if (!anchorElement.innerText) {
+        if (!anchorElement.textContent) {
           return;
         }
 
+        anchorElement.textContent = anchorElement.textContent;
         anchorElement.prepend("[");
         anchorElement.append("]");
       });
@@ -382,7 +383,8 @@ const getSelectedText = () => {
 
       return rangeToGetText.toString();
     })
-    .join("");
+    .join("")
+    .trim();
 };
 
 const getStructuredDataImageURL = ({
@@ -560,7 +562,13 @@ const sendPage = () => {
     }
 
     try {
-      const jsonLD: unknown = JSON.parse(jsonLDElement.innerText);
+      const jsonString = jsonLDElement.textContent;
+
+      if (!jsonString) {
+        throw new Error("JSON string is empty");
+      }
+
+      const jsonLD: unknown = JSON.parse(jsonString);
       const jsonLDDocuments: unknown[] = Array.isArray(jsonLD)
         ? jsonLD
         : [jsonLD];
