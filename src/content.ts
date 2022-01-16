@@ -52,6 +52,7 @@ const getBody = ({
     undefined;
 
   return [
+    getTitle({ structuredDataList }),
     getBreadcrumbs({ structuredDataList }),
     // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
     imageURL && `[${imageURL}#.png]`,
