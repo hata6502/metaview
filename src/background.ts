@@ -1,50 +1,37 @@
+import { Bookmark } from "./content";
 import { initialStorageValues } from "./initialStorageValues";
 
-export interface BackgroundMessage {
-  body: string;
-  title: string;
-}
-
-const pageMap = new Map<number, BackgroundMessage>();
-
-chrome.runtime.onMessage.addListener(
-  ({ body, title }: BackgroundMessage, sender) => {
-    const tabID = sender.tab?.id;
-
-    if (tabID === undefined) {
-      return;
-    }
-
-    pageMap.set(tabID, { body, title });
-  }
-);
+export type BackgroundMessage = {
+  type: "getBookmark";
+};
 
 chrome.action.onClicked.addListener(async (tab) => {
-  const tabID = tab.id;
-
-  if (tabID === undefined) {
+  if (typeof tab.id !== "number") {
     return;
   }
 
-  const page = pageMap.get(tabID);
+  const backgroundMessage: BackgroundMessage = {
+    type: "getBookmark",
+  };
 
-  if (!page) {
-    throw new Error("No page found for bookmark");
-  }
+  chrome.tabs.sendMessage(
+    tab.id,
+    backgroundMessage,
+    async (bookmark: Bookmark) => {
+      const { scrapboxProjectName, scrapboxURL } =
+        await chrome.storage.sync.get(initialStorageValues);
 
-  const { scrapboxProjectName, scrapboxURL } = await chrome.storage.sync.get(
-    initialStorageValues
+      if (!scrapboxProjectName || !scrapboxURL) {
+        chrome.runtime.openOptionsPage();
+
+        return;
+      }
+
+      chrome.tabs.create({
+        url: `${scrapboxURL}/${scrapboxProjectName}/${encodeURIComponent(
+          bookmark.title
+        )}?${new URLSearchParams({ body: bookmark.body }).toString()}`,
+      });
+    }
   );
-
-  if (!scrapboxProjectName || !scrapboxURL) {
-    chrome.runtime.openOptionsPage();
-
-    return;
-  }
-
-  chrome.tabs.create({
-    url: `${scrapboxURL}/${scrapboxProjectName}/${encodeURIComponent(
-      page.title
-    )}?${new URLSearchParams({ body: page.body }).toString()}`,
-  });
 });

@@ -554,47 +554,62 @@ const postalAddressToString = (postalAddress: PostalAddress) =>
 
 const stringToHashTag = (string: string) => `#${string.replaceAll(" ", "_")}`;
 
-const sendPage = () => {
-  const structuredDataList = [
-    ...document.querySelectorAll('script[type="application/ld+json" i]'),
-  ].flatMap((jsonLDElement) => {
-    if (!(jsonLDElement instanceof HTMLScriptElement)) {
-      return [];
-    }
+export interface Bookmark {
+  body: string;
+  title: string;
+}
 
-    try {
-      const jsonString = jsonLDElement.textContent;
+chrome.runtime.onMessage.addListener(
+  (backgroundMessage: BackgroundMessage, _sender, sendResponse) => {
+    switch (backgroundMessage.type) {
+      case "getBookmark": {
+        const structuredDataList = [
+          ...document.querySelectorAll('script[type="application/ld+json" i]'),
+        ].flatMap((jsonLDElement) => {
+          if (!(jsonLDElement instanceof HTMLScriptElement)) {
+            return [];
+          }
 
-      if (!jsonString) {
-        throw new Error("JSON string is empty");
+          try {
+            const jsonString = jsonLDElement.textContent;
+
+            if (!jsonString) {
+              throw new Error("JSON string is empty");
+            }
+
+            const jsonLD: unknown = JSON.parse(jsonString);
+            const jsonLDDocuments: unknown[] = Array.isArray(jsonLD)
+              ? jsonLD
+              : [jsonLD];
+
+            return jsonLDDocuments.flatMap((jsonLDDocument) =>
+              isStructuredData(jsonLDDocument) ? [jsonLDDocument] : []
+            );
+          } catch (exception) {
+            console.error(exception);
+
+            return [];
+          }
+        });
+
+        const bookmark: Bookmark = {
+          body: `${getBody({ structuredDataList })
+            .split("\n")
+            .map((line) => `> ${line}`)
+            .join("\n")}\n`,
+          title: getTitle({ structuredDataList }),
+        };
+
+        sendResponse(bookmark);
+
+        break;
       }
 
-      const jsonLD: unknown = JSON.parse(jsonString);
-      const jsonLDDocuments: unknown[] = Array.isArray(jsonLD)
-        ? jsonLD
-        : [jsonLD];
+      /*default: {
+        const exhaustiveCheck: never = backgroundMessage;
 
-      return jsonLDDocuments.flatMap((jsonLDDocument) =>
-        isStructuredData(jsonLDDocument) ? [jsonLDDocument] : []
-      );
-    } catch (exception) {
-      console.error(exception);
-
-      return [];
+        throw new Error(`Unknown message type: ${exhaustiveCheck}`);
+      }*/
     }
-  });
-
-  const backgroundMessage: BackgroundMessage = {
-    body: `${getBody({ structuredDataList })
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n")}\n`,
-    title: getTitle({ structuredDataList }),
-  };
-
-  chrome.runtime.sendMessage(backgroundMessage);
-};
-
-sendPage();
-addEventListener("load", sendPage);
-setInterval(sendPage, 1000);
+  }
+);
