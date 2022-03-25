@@ -60,6 +60,7 @@ const getBody = ({
     getDateLine({ structuredDataList }),
     getDetails({ structuredDataList }),
     getDescription({ structuredDataList }),
+    getMetadataClassElementText(),
     getHashTagLine(),
     getCreditLine({ structuredDataList }),
   ]
@@ -345,6 +346,14 @@ const getHashTagLine = () => {
   });
 
   return keywords.map(stringToHashTag).join(" ");
+};
+
+const getMetadataClassElementText = () => {
+  const metadataClassElement = document.querySelector(".metadata");
+
+  return metadataClassElement instanceof HTMLElement
+    ? metadataClassElement.innerText
+    : "";
 };
 
 const getSelectedText = () => {
