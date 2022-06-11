@@ -51,7 +51,7 @@ const getBody = ({
     (iconElement instanceof HTMLLinkElement && iconElement.href) ||
     undefined;
 
-  return [
+  const quote = [
     getTitle({ structuredDataList }),
     getBreadcrumbs({ structuredDataList }),
     // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
@@ -60,11 +60,18 @@ const getBody = ({
     getDateLine({ structuredDataList }),
     getDetails({ structuredDataList }),
     getDescription({ structuredDataList }),
-    getHashTagLine(),
-    getCreditLine({ structuredDataList }),
   ]
     .filter((line) => line)
-    .join("\n\n");
+    .join("\n")
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
+
+  const footer = [getHashTagLine(), getCreditLine({ structuredDataList })]
+    .filter((line) => line)
+    .join("\n");
+
+  return `${quote}\n\n\n${footer}`;
 };
 
 const getBreadcrumbs = ({
@@ -593,10 +600,7 @@ chrome.runtime.onMessage.addListener(
         });
 
         const bookmark: Bookmark = {
-          body: `${getBody({ structuredDataList })
-            .split("\n")
-            .map((line) => `> ${line}`)
-            .join("\n")}\n`,
+          body: getBody({ structuredDataList }),
           title: getTitle({ structuredDataList }),
         };
 
