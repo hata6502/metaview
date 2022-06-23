@@ -39,7 +39,10 @@ const getBody = ({
   const selectedText = getSelectedText();
 
   if (selectedText) {
-    return selectedText;
+    return selectedText
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
   }
 
   const ogImageElement = document.querySelector('meta[property="og:image" i]');
@@ -392,6 +395,7 @@ const getSelectedText = () => {
       return rangeToGetText.toString();
     })
     .join("")
+    .replaceAll(/\n{3,}/g, "\n\n")
     .trim();
 };
 
