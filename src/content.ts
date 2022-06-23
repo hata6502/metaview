@@ -41,7 +41,7 @@ const getBody = ({
   if (selectedText) {
     return selectedText
       .split("\n")
-      .map((line) => `> ${line}`)
+      .map((line) => `> ${line.trim()}`)
       .join("\n");
   }
 
