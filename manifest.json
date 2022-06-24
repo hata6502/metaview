@@ -1,6 +1,6 @@
 {
   "name": "metaview",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "manifest_version": 3,
   "description": "Bookmark web pages to Scrapbox with thumbnail, description, keywords, and more metadata. ",
   "action": {},

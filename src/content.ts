@@ -56,7 +56,6 @@ const getBody = ({
 
   const quote = [
     getTitle({ structuredDataList }),
-    getBreadcrumbs({ structuredDataList }),
     // https://scrapbox.io/forum-jp/.pngや.jpgで終わらないURLの画像を貼りたい
     imageURL && `[${imageURL}#.png]`,
     `[${location.href}]`,
@@ -70,7 +69,11 @@ const getBody = ({
     .map((line) => `> ${line}`)
     .join("\n");
 
-  const footer = [getHashTagLine(), getCreditLine({ structuredDataList })]
+  const footer = [
+    getBreadcrumbs({ structuredDataList }),
+    getHashTagLine(),
+    getCreditLine({ structuredDataList }),
+  ]
     .filter((line) => line)
     .join("\n");
 
@@ -90,6 +93,7 @@ const getBreadcrumbs = ({
         ? [
             [...itemListElement]
               .sort((a, b) => a.position - b.position)
+              .reverse()
               .flatMap((listItem) => {
                 if (!listItem) {
                   return [];
@@ -99,7 +103,7 @@ const getBreadcrumbs = ({
 
                 return typeof name === "string" ? [`[${name}]`] : [];
               })
-              .join(" > "),
+              .join(" < "),
           ]
         : [];
     })
@@ -156,7 +160,7 @@ const getCreditLine = ({
 
   return (
     credits.length >= 1 &&
-    `by ${credits.map((credit) => `[${credit}]`).join(" ")}`
+    `by ${credits.map((credit) => `[${credit}]`).join(", ")}`
   );
 };
 
