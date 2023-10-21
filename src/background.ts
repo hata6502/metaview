@@ -5,6 +5,12 @@ export type BackgroundMessage = {
   type: "getBookmark";
 };
 
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.tabs.create({
+    url: "https://chrome.google.com/webstore/detail/anno/idgkmipflfgjphmbennfclgnalmaggdm?hl=ja&authuser=0",
+  });
+});
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (typeof tab.id !== "number") {
     return;
